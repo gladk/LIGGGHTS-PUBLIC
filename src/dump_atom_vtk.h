@@ -19,7 +19,7 @@
 
    See the README file in the top-level directory.
 ------------------------------------------------------------------------- */
-
+#ifdef LAMMPS_VTK
 #ifdef DUMP_CLASS
 
 DumpStyle(atom/vtk,DumpATOMVTK)
@@ -109,5 +109,6 @@ class DumpATOMVTK : public Dump {
 
 }
 
+#endif
 #endif
 #endif

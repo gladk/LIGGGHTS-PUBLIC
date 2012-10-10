@@ -19,7 +19,7 @@
 
    See the README file in the top-level directory.
 ------------------------------------------------------------------------- */
-
+#ifdef LAMMPS_VTK
 #include "string.h"
 #include "dump_atom_vtk.h"
 #include "atom.h"
@@ -330,3 +330,4 @@ void DumpATOMVTK::setFileCurrent() {
     *ptr = '*';
   }
 }
+#endif
