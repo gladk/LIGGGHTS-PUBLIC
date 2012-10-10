@@ -30,6 +30,8 @@ DumpStyle(atom/vtk,DumpATOMVTK)
 #define LMP_DUMP_ATOM_VTK_H
 
 #include "dump.h"
+#include <iostream>
+#include <fstream>
 
 #include<vtkCellArray.h>
 #include<vtkFloatArray.h>
@@ -48,12 +50,14 @@ DumpStyle(atom/vtk,DumpATOMVTK)
 #include<vtkLine.h>
 #include<vtkQuad.h>
 
+#include <Eigen/Core>
+#include "update.h"
+
 namespace LAMMPS_NS {
 
 class DumpATOMVTK : public Dump {
  public:
   DumpATOMVTK(class LAMMPS *, int, char**);
-  ~DumpATOMVTK() {}
 
  private:
   void init_style();
@@ -62,7 +66,45 @@ class DumpATOMVTK : public Dump {
   void pack(int *);
   void write_data(int, double *);
   
-  vtkSmartPointer<vtkUnstructuredGrid> spheresUg;
+  typedef Eigen::Matrix<double, 3, 1> V3;
+  int n_calls_;
+  char * filecurrent;
+  void setFileCurrent();
+  
+  
+  class DataVTK {
+    public:
+      V3 _Pos;
+      double _Rad;
+      double _Mass;
+      int _Id;
+      int _Type;
+      V3 _VelL;
+      V3 _VelA;
+      V3 _Force;
+      int _proc;
+      DataVTK(V3, double, double, int, int, V3, V3, V3, int);
+      std::string serialize();
+  };
+  
+  class vtkExportData {
+    private:
+      std::vector<DumpATOMVTK::DataVTK> vtkData;
+      ofstream fileVTK;
+      const char * _fileName;
+      bool _setFileName;
+    public:
+      vtkExportData();
+      void add(DumpATOMVTK::DataVTK &);
+      const int size();
+      void writeSER();
+      void setFileName(const char *);
+      void show();
+      void clear();
+  };
+  
+  vtkExportData tmpEXP;
+  
 };
 
 }
