@@ -65,7 +65,7 @@ JPG_LIB =
 # PATH = path for VTK library
 # LIB = name of VTK library
 
-VTK_INC = -I/usr/include/vtk-5.8
+VTK_INC = -I/usr/include/vtk-5.8 -I/usr/include/eigen3
 VTK_PATH = 
 VTK_LIB = -lvtkCommon -lvtkHybrid -lvtkFiltering -lvtkRendering -lvtkIO -lvtkexoIIc -lvtkParallel -lvtkGraphics -lvtkverdict -lvtkImaging -lvtkftgl -lvtkDICOMParser -lvtkmetaio
 
