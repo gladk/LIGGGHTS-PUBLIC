@@ -41,6 +41,11 @@ DumpATOMVTK::DumpATOMVTK(LAMMPS *lmp, int narg, char **arg) : Dump(lmp, narg, ar
   sortcol = 0;
 
   size_one = 17;
+  
+  char *str = (char *) "%d %g %g %g";
+  int n = strlen(str) + 1;
+  format_default = new char[n];
+  strcpy(format_default,str);
 }
 
 /* ---------------------------------------------------------------------- */
