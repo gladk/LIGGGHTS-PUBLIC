@@ -155,6 +155,7 @@ void DumpATOMVTK::write_data(int n, double *mybuf)
   if(n_calls_ == comm->nprocs) {
     tmpEXP.writeSER();
     tmpEXP.clear();
+    delete [] filecurrent;
   }
 }
 
@@ -172,7 +173,6 @@ DumpATOMVTK::DataVTK::DataVTK(V3 Pos, double Rad, double Mass, int Id, int Type,
   _Force = Force;
   _proc = proc;
 }
-
 /* ---------------------------------------------------------------------- */
 
 std::string  DumpATOMVTK::DataVTK::serialize() {
@@ -207,7 +207,6 @@ void DumpATOMVTK::vtkExportData::setFileName(const char * fileName) {
 DumpATOMVTK::vtkExportData::vtkExportData() {
   _setFileName=false;
 }
-
 /* ---------------------------------------------------------------------- */
 
 const int DumpATOMVTK::vtkExportData::size() {
