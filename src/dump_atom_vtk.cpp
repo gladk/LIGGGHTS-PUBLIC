@@ -88,6 +88,8 @@ void DumpATOMVTK::pack(int *ids)
   int *tag = atom->tag;
   int *type = atom->type;
   int *mask = atom->mask;
+  double *rmass = atom->rmass;
+  double *mass = atom->mass;
   double **x = atom->x;
   double **v = atom->v;
   double **f = atom->f;
@@ -99,12 +101,14 @@ void DumpATOMVTK::pack(int *ids)
 
       if (ids) ids[n++] = tag[i];
       
-      double mass;
-      if (atom->mass) {
-        mass = atom->mass[i];
+      double massTemp;
+      
+      if (rmass) {
+        massTemp=rmass[i];
       } else {
-        mass=0.0;
+        massTemp=mass[type[i]];
       }
+      
       int me = comm->me;
       
       buf[m++] = x[i][0];
@@ -112,7 +116,7 @@ void DumpATOMVTK::pack(int *ids)
       buf[m++] = x[i][2];
       
       buf[m++] = atom->radius[i];
-      buf[m++] = mass;
+      buf[m++] = massTemp;
       buf[m++] = static_cast<double>(tag[i]);
       buf[m++] = static_cast<double>(type[i]);
       
