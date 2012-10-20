@@ -1,6 +1,8 @@
 FILE(GLOB SRC_FILES_SRC "*.cpp")
 SET(SRC_FILES ${SRC_FILES_SRC})
 
+FILE(GLOB SRC_FILES_HEAD "*.h")
+
 FOREACH(SUB_DIR_ADD ${MODULES_PACKAGE} ${MODULES_USER})
  MESSAGE("SUB_DIR_ADD: ${SUB_DIR_ADD}")
  FILE(GLOB SRC_FILES_ADD "${SUB_DIR_ADD}/*.cpp")
@@ -9,6 +11,7 @@ FOREACH(SUB_DIR_ADD ${MODULES_PACKAGE} ${MODULES_USER})
 ENDFOREACH(SUB_DIR_ADD ${MODULES_PACKAGE} ${MODULES_USER})
 
 
+#======================================================
 ADD_EXECUTABLE(liggghts ${SRC_FILES})
 SET_TARGET_PROPERTIES(liggghts PROPERTIES OUTPUT_NAME "liggghts${SUFFIX}")
 
@@ -20,5 +23,25 @@ IF(VTK_FOUND)
   TARGET_LINK_LIBRARIES(liggghts vtkHybrid)
 ENDIF(VTK_FOUND)
 
-
 INSTALL(TARGETS liggghts DESTINATION "bin/")
+
+#======================================================
+
+ADD_LIBRARY(libliggghts SHARED ${SRC_FILES})
+SET_TARGET_PROPERTIES(libliggghts PROPERTIES 
+  OUTPUT_NAME "liggghts${SUFFIX}"
+  SOVERSION ${VERSION})
+
+IF(JPEG_FOUND)
+  TARGET_LINK_LIBRARIES(libliggghts ${JPEG_LIBRARIES})
+ENDIF(JPEG_FOUND)
+
+IF(VTK_FOUND)
+  TARGET_LINK_LIBRARIES(libliggghts vtkHybrid)
+ENDIF(VTK_FOUND)
+
+INSTALL(TARGETS libliggghts DESTINATION "lib/${LIB_SUFFIX}/")
+#======================================================
+INSTALL(FILES ${SRC_FILES_HEAD} DESTINATION "include/liggghts${SUFFIX}/")
+#======================================================
+
