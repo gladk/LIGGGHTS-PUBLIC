@@ -31,6 +31,7 @@ DumpStyle(atom/vtk,DumpATOMVTK)
 
 #include "dump.h"
 #include <iostream>
+#include <vector>
 #include <fstream>
 
 #include<vtkCellArray.h>
