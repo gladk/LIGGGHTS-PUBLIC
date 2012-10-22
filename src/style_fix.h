@@ -98,6 +98,7 @@
 #include "fix_wall_gran_hooke.h"
 #include "fix_wall_gran_hooke_history.h"
 #include "fix_wall_gran_hooke_history_simple.h"
+#include "fix_wall_gran_hooke_history_viscel.h"
 #include "fix_wall_harmonic.h"
 #include "fix_wall_lj126.h"
 #include "fix_wall_lj93.h"

@@ -20,47 +20,34 @@
    See the README file in the top-level directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing authors for original version: Leo Silbert (SNL), Gary Grest (SNL)
+------------------------------------------------------------------------- */
 
-/*
- * The class is based on the following article:
- * Molecular-dynamics force models for better control of energy dissipation in numerical simulations of dense granular media
- * Phys. Rev. E 65, 011302 (2001)
- * http://pre.aps.org/abstract/PRE/v65/i1/e011302
- */ 
- 
-#ifdef PAIR_CLASS
+#ifdef FIX_CLASS
 
-PairStyle(gran/hooke/history/viscel,PairGranHookeHistoryViscEl)
+FixStyle(wall/gran/hooke/history/viscel,FixWallGranHookeHistoryViscEl)
 
 #else
 
-#ifndef LMP_PAIR_GRAN_HOOKE_HISTORY_VISCEL_H
-#define LMP_PAIR_GRAN_HOOKE_HISTORY_VISCEL_H
+#ifndef LMP_FIX_WALL_GRAN_HOOKE_HISTORY_VISCEL_H
+#define LMP_FIX_WALL_GRAN_HOOKE_HISTORY_VISCEL_H
 
-#include "pair_gran_hooke_history.h"
+#include "fix.h"
+#include "fix_wall_gran_hooke_history.h"
 
 namespace LAMMPS_NS {
 
-class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
-
- friend class FixWallGranHookeHistoryViscEl;
-
+class FixWallGranHookeHistoryViscEl : public FixWallGranHookeHistory {
  public:
-
-  PairGranHookeHistoryViscEl(class LAMMPS *);
-  ~PairGranHookeHistoryViscEl();
-
-  virtual void settings(int, char **);
-  virtual void init_granular();
+  FixWallGranHookeHistoryViscEl(class LAMMPS *, int, char **);
+  void init_granular();
 
  protected:
-  virtual void allocate_properties(int);
-  virtual void deriveContactModelParams(int &, int &,double &, double &, double &,double &, double &, double &, double &,double &);
 
-  //stiffness and damp parameters
+  virtual void deriveContactModelParams(int ip, double deltan, double meff_wall, double &kn, double &kt, double &gamman, double &gammat, double &xmu,double &rmu);
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
   double **k_n,**k_t,**gamma_n,**gamma_t;
-  
   int damp_massflag;
 };
 
