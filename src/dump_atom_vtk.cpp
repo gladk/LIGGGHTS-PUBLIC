@@ -298,7 +298,6 @@ void DumpATOMVTK::vtkExportData::writeSER() {
   spheresUg->GetPointData()->AddArray(spheresForce);
   
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
-  writer->SetDataModeToAscii();
   writer->SetInput(spheresUg);
   writer->SetFileName(_fileName);
   writer->Write();
