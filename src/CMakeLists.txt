@@ -12,20 +12,16 @@ ENDFOREACH(SUB_DIR_ADD ${MODULES_PACKAGE} ${MODULES_USER})
 
 
 #======================================================
-ADD_EXECUTABLE(liggghts ${SRC_FILES})
-SET_TARGET_PROPERTIES(liggghts PROPERTIES OUTPUT_NAME "liggghts${SUFFIX}")
-
-IF(JPEG_FOUND)
-  TARGET_LINK_LIBRARIES(liggghts ${JPEG_LIBRARIES})
-ENDIF(JPEG_FOUND)
-
-IF(VTK_FOUND)
-  TARGET_LINK_LIBRARIES(liggghts vtkHybrid)
-ENDIF(VTK_FOUND)
-
-INSTALL(TARGETS liggghts DESTINATION "bin/")
-
+IF (USERPATH)
+  SET(CMAKE_SKIP_BUILD_RPATH FALSE)
+  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+  SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/${LIB_SUFFIX}/")
+  SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+ENDIF (USERPATH)
 #======================================================
+
+FILE(GLOB to_remove main.cpp)
+LIST(REMOVE_ITEM SRC_FILES ${to_remove})
 
 ADD_LIBRARY(libliggghts SHARED ${SRC_FILES})
 SET_TARGET_PROPERTIES(libliggghts PROPERTIES 
@@ -42,6 +38,15 @@ ENDIF(VTK_FOUND)
 
 INSTALL(TARGETS libliggghts DESTINATION "lib/${LIB_SUFFIX}/")
 #======================================================
+
+ADD_EXECUTABLE(liggghts main.cpp)
+SET_TARGET_PROPERTIES(liggghts PROPERTIES OUTPUT_NAME "liggghts${SUFFIX}")
+TARGET_LINK_LIBRARIES(liggghts libliggghts)
+
+INSTALL(TARGETS liggghts DESTINATION "bin/")
+
+#======================================================
+
 INSTALL(FILES ${SRC_FILES_HEAD} DESTINATION "include/liggghts${SUFFIX}/")
 #======================================================
 

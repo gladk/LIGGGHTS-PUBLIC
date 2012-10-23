@@ -1,5 +1,9 @@
 # ENABLE_PACKAGE: enable PACKAGE-modules (OFF by default)
 # ENABLE_PACKAGEUSER: enable PACKAGEUSER-modules (OFF by default)
+# SUFFIX: add sufix to binary-name (NONE by default)
+# USERPATH: use RPATH for search of the shared library libliggghts, need to be switched on by packaging (ON by default)
+# VERSION: version number (2.2 by default)
+# LIB_SUFFIX: suffix, where libliggghts library will be installed, lib/${LIB_SUFFIX} (NONE by default)
 
 PROJECT(LIGGGHTS C CXX)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
@@ -8,6 +12,7 @@ SET(CMAKE_VERBOSE_MAKEFILE 1)
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cMake")
 
 SET(VERSION 2.2)
+SET(USERPATH 1)
 #=======================================
 
 IF (NOT CMAKE_CXX_FLAGS)
