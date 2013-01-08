@@ -53,7 +53,8 @@ enum
     DUMP_AEDGES = 256,
     DUMP_ACORNERS = 512,
     DUMP_INDEX = 1024,
-    DUMP_NNEIGHS = 2048
+    DUMP_NNEIGHS = 2048,
+    DUMP_MIN_ACTIVE_EDGE_DIST = 2048
 };
 
 enum
@@ -77,7 +78,15 @@ DumpMeshVTK::DumpMeshVTK(LAMMPS *lmp, int narg, char **arg) : Dump(lmp, narg, ar
   sigma_t_(0),
   wear_(0),
   v_node_(0),
-  f_node_(0)
+  f_node_(0),
+  T_(0),
+  min_active_edge_dist_(0),
+  scalar_containers_(0),
+  n_scalar_containers_(0),
+  vector_containers_(0),
+  n_vector_containers_(0),
+  container_args_(0),
+  n_container_bases_(0)
 {
   if (narg < 5)
     error->all(FLERR,"Illegal dump mesh/vtk command");
@@ -86,15 +95,7 @@ DumpMeshVTK::DumpMeshVTK(LAMMPS *lmp, int narg, char **arg) : Dump(lmp, narg, ar
 
   format_default = NULL;
 
-  nMesh_ = modify->n_fixes_style("mesh/surface");
-  
-  // create meshlist
-  meshList_ = new TriMesh*[nMesh_];
-  for (int iMesh = 0; iMesh < nMesh_; iMesh++)
-  {
-      
-      meshList_[iMesh] = static_cast<FixMeshSurface*>(modify->find_fix_style("mesh/surface",iMesh))->triMesh();
-  }
+  nMesh_ = 0;
 
   int iarg = 5;
 
@@ -183,21 +184,37 @@ DumpMeshVTK::DumpMeshVTK(LAMMPS *lmp, int narg, char **arg) : Dump(lmp, narg, ar
           iarg++;
           hasargs = true;
       }
+      else if(strcmp(arg[iarg],"distaa")==0)
+      {
+          dump_what_ |= DUMP_MIN_ACTIVE_EDGE_DIST;
+          iarg++;
+          hasargs = true;
+      }
       else
       {
           // assume it's a mesh
           TriMesh **meshListNew = new TriMesh*[nMesh_+1];
           for(int i = 0; i < nMesh_; i++)
             meshListNew[i] = meshList_[i];
-          delete[] meshList_;
+          if(meshList_) delete[] meshList_;
           meshList_ = meshListNew;
 
           int ifix = modify->find_fix(arg[iarg++]);
+
           if(ifix == -1)
-              error->all(FLERR,"Illegal dump mesh/vtk command, unknown keyword or mesh");
-          FixMeshSurface *fms = static_cast<FixMeshSurface*>(modify->fix[ifix]);
-          meshList_[nMesh_] = fms->triMesh();
-          nMesh_++;
+          {
+              n_container_bases_++;
+              memory->grow(container_args_,n_container_bases_,100,"container_args_");
+              strcpy(container_args_[n_container_bases_-1],arg[iarg-1]);
+              
+          }
+          else
+          {
+              FixMeshSurface *fms = static_cast<FixMeshSurface*>(modify->fix[ifix]);
+              meshList_[nMesh_] = fms->triMesh();
+              nMesh_++;
+          }
+          hasargs = true;
       }
   }
 
@@ -223,8 +240,18 @@ DumpMeshVTK::DumpMeshVTK(LAMMPS *lmp, int narg, char **arg) : Dump(lmp, narg, ar
   wear_ = new ScalarContainer<double>*[nMesh_];
   v_node_ = new MultiVectorContainer<double,3,3>*[nMesh_];
   f_node_ = new VectorContainer<double,3>*[nMesh_];
+  T_ = new ScalarContainer<double>*[nMesh_];
+  min_active_edge_dist_ = new ScalarContainer<double>*[nMesh_];
 
-  if(dump_what_ == 0)
+  scalar_containers_ = new ScalarContainer<double>**[n_container_bases_];
+  vector_containers_ = new VectorContainer<double,3>**[n_container_bases_];
+  for(int i = 0; i < n_container_bases_; i++)
+  {
+      scalar_containers_[i] = new ScalarContainer<double>*[nMesh_];
+      vector_containers_[i] = new VectorContainer<double,3>*[nMesh_];
+  }
+
+  if(dump_what_ == 0 && n_container_bases_ == 0)
     error->all(FLERR,"Dump mesh/vtk: No dump quantity selected");
 }
 
@@ -281,6 +308,36 @@ void DumpMeshVTK::init_style()
     size_one += 1;
   if(dump_what_ & DUMP_NNEIGHS)
     size_one += 1;
+  if(dump_what_ & DUMP_MIN_ACTIVE_EDGE_DIST)
+    size_one += 1;
+
+  getGeneralRefs();
+
+  ScalarContainer<double> *cb1;
+  VectorContainer<double,3> *cb2;
+
+  if(n_container_bases_ && dataMode_ == 1)
+    error->all(FLERR,"Dump mesh/vtk: Can not dump interpolated general properties");
+
+  for(int ib = 0; ib < n_scalar_containers_; ib++)
+  {
+      for(int i = 0; i < nMesh_; i++)
+      {
+          cb1 = scalar_containers_[ib][i];
+          if(cb1)
+            size_one += 1;
+      }
+  }
+
+  for(int ib = 0; ib < n_vector_containers_; ib++)
+  {
+      for(int i = 0; i < nMesh_; i++)
+      {
+          cb2 = vector_containers_[ib][i];
+          if(cb2)
+            size_one += 3;
+      }
+  }
 
   delete [] format;
 }
@@ -318,7 +375,12 @@ int DumpMeshVTK::count()
   getRefs();
 
   for(int i = 0; i < nMesh_; i++)
+  {
+    if(!meshList_[i]->isParallel() && 0 != comm->me)
+        continue;
     numTri += meshList_[i]->sizeLocal();
+    
+  }
 
   return numTri;
 }
@@ -358,15 +420,58 @@ void DumpMeshVTK::getRefs()
           wear_[i] = meshList_[i]->prop().getElementProperty<ScalarContainer<double> >("wear");
       }
   }
+  if(dump_what_ & DUMP_TEMP)
+  {
+      for(int i = 0; i < nMesh_; i++)
+      {
+          T_[i] = meshList_[i]->prop().getGlobalProperty<ScalarContainer<double> >("T");
+      }
+  }
+  if(dump_what_ & DUMP_MIN_ACTIVE_EDGE_DIST)
+  {
+      for(int i = 0; i < nMesh_; i++)
+      {
+          min_active_edge_dist_[i] = meshList_[i]->prop().getElementProperty<ScalarContainer<double> >("minActiveEdgeDist");
+      }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpMeshVTK::getGeneralRefs()
+{
+  
+  n_scalar_containers_ = 0;
+  n_vector_containers_ = 0;
+
+  for(int ib = 0; ib < n_container_bases_; ib++)
+  {
+      bool found = false;
+
+      for(int i = 0; i < nMesh_; i++)
+      {
+          if(meshList_[i]->prop().getElementProperty<ScalarContainer<double> >(container_args_[ib]))
+            scalar_containers_[n_scalar_containers_++][i] = meshList_[i]->prop().getElementProperty<ScalarContainer<double> >(container_args_[ib]);
+          if(meshList_[i]->prop().getElementProperty<VectorContainer<double,3> >(container_args_[ib]))
+            vector_containers_[n_vector_containers_++][i] = meshList_[i]->prop().getElementProperty<VectorContainer<double,3> >(container_args_[ib]);
+          if(scalar_containers_[ib][i] || vector_containers_[ib][i])
+            found = true;
+      }
+
+      if(!found)
+        error->all(FLERR,"Illegal dump mesh/vtk command, unknown keyword or mesh");
+  }
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpMeshVTK::pack(int *ids)
 {
-  int m = 0;
+  int m = 0, cbsize;
   double node[3];
   TriMesh *mesh;
+  ScalarContainer<double> *cb1;
+  VectorContainer<double,3> *cb2;
 
   double **tmp;
   memory->create<double>(tmp,3,3,"DumpMeshVTK:tmp");
@@ -376,6 +481,10 @@ void DumpMeshVTK::pack(int *ids)
   for(int iMesh = 0;iMesh < nMesh_; iMesh++)
   {
     mesh = meshList_[iMesh];
+
+    if(!mesh->isParallel() && 0 != comm->me)
+        continue;
+
     int nlocal = meshList_[iMesh]->sizeLocal();
 
     for(int iTri = 0; iTri < nlocal; iTri++)
@@ -443,7 +552,7 @@ void DumpMeshVTK::pack(int *ids)
 
         if(dump_what_ & DUMP_TEMP)
         {
-            buf[m++] = /*TODO temp*/ 0.;
+            buf[m++] = T_[iMesh] ? T_[iMesh]->get(0) : 0.;
         }
 
         if(dump_what_ & DUMP_OWNER)
@@ -473,6 +582,24 @@ void DumpMeshVTK::pack(int *ids)
         if(dump_what_ & DUMP_NNEIGHS)
         {
             buf[m++] = static_cast<double>(mesh->nNeighs(iTri));
+        }
+        if(dump_what_ & DUMP_MIN_ACTIVE_EDGE_DIST)
+        {
+            buf[m++] = min_active_edge_dist_[iMesh] ? min_active_edge_dist_[iMesh]->get(iTri) : 0.;
+        }
+
+        for(int ib = 0; ib < n_scalar_containers_; ib++)
+        {
+           cb1 = scalar_containers_[iMesh][ib];
+           buf[m++] = cb1 ? (*cb1)(iTri) : 0.;
+        }
+
+        for(int ib = 0; ib < n_vector_containers_; ib++)
+        {
+           cb2 = vector_containers_[iMesh][ib];
+           buf[m++] = cb2 ? (*cb2)(iTri)[0] : 0.;
+           buf[m++] = cb2 ? (*cb2)(iTri)[1] : 0.;
+           buf[m++] = cb2 ? (*cb2)(iTri)[2] : 0.;
         }
     }
   }
@@ -755,6 +882,11 @@ void DumpMeshVTK::write_data_ascii_point(int n, double *mybuf)
       {
         buf_pos++;
       }
+      // not able to interpolate this
+      if(dump_what_ & DUMP_MIN_ACTIVE_EDGE_DIST)
+      {
+        buf_pos++;
+      }
     return;
 }
 
@@ -959,6 +1091,50 @@ void DumpMeshVTK::write_data_ascii_face(int n, double *mybuf)
           m += size_one;
       }
       buf_pos++;
+  }
+  if(dump_what_ & DUMP_NNEIGHS)
+  {
+      //write owner data
+      fprintf(fp,"SCALARS min_active_edge_dist float 1\nLOOKUP_TABLE default\n");
+      m = buf_pos;
+      for (int i = 0; i < n; i++)
+      {
+          fprintf(fp,"%f\n",mybuf[m]);
+          m += size_one;
+      }
+      buf_pos++;
+  }
+
+  for(int ib = 0; ib < n_scalar_containers_; ib++)
+  {
+      char cid[100];
+      scalar_containers_[ib][0]->id(cid);
+
+      //write owner data
+      fprintf(fp,"SCALARS %s float 1\nLOOKUP_TABLE default\n",cid);
+      m = buf_pos;
+      for (int i = 0; i < n; i++)
+      {
+          fprintf(fp,"%f\n",mybuf[m]);
+          m += size_one;
+      }
+      buf_pos++;
+  }
+
+  for(int ib = 0; ib < n_vector_containers_; ib++)
+  {
+      char cid[100];
+      vector_containers_[ib][0]->id(cid);
+
+      //write vector data
+      fprintf(fp,"VECTORS %s float\n",cid);
+      m = buf_pos;
+      for (int i = 0; i < n; i++)
+      {
+          fprintf(fp,"%f %f %f\n",mybuf[m],mybuf[m+1],mybuf[m+2]);
+          m += size_one;
+      }
+      buf_pos += 3;
   }
 
   // footer not needed

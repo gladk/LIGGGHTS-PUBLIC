@@ -33,11 +33,12 @@ FixStyle(insert/stream,FixInsertStream)
 namespace LAMMPS_NS {
 
 class FixInsertStream : public FixInsert {
+
  public:
 
   FixInsertStream(class LAMMPS *, int, char **);
   ~FixInsertStream();
-  void post_create();
+  virtual void post_create();
   void pre_delete(bool unfixflag);
 
   virtual int setmask();
@@ -46,10 +47,9 @@ class FixInsertStream : public FixInsert {
 
   void init_defaults();
 
- private:
+ protected:
 
   virtual void calc_insertion_properties();
-  void create_mesh_copy();
 
   void pre_insert();
 
@@ -81,8 +81,6 @@ class FixInsertStream : public FixInsert {
 
   // mesh face and bounding box of extruded face
   class TriMesh *ins_face;
-  class TriMesh *mesh_copy;
-  bool do_copy;
   double ins_vol_xmin[3];
   double ins_vol_xmax[3];
   int ntry_mc;

@@ -49,6 +49,8 @@ namespace LAMMPS_NS
         template<typename T>
         T* getElementProperty(char *_id);
 
+        inline ContainerBase* getElementPropertyBase(char *_id);
+
         template<typename T, typename U>
         void setElementProperty(char *_id, U def);
 
@@ -106,6 +108,7 @@ namespace LAMMPS_NS
         inline int popGlobalPropsFromBuffer(double *buf, int operation,bool scale,bool translate, bool rotate);
 
         // mem managenement
+
         int getCapacity();
         inline void grow(int to);
 

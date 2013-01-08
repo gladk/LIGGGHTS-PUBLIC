@@ -6,7 +6,6 @@
    www.liggghts.com | www.cfdem.com
 
    Christoph Kloss, christoph.kloss@cfdem.com
-   Anton Gladky, gladky.anton@gmail.com
    Copyright 2009-2012 JKU Linz
    Copyright 2012-     DCS Computing GmbH, Linz
 
@@ -19,6 +18,12 @@
 
    See the README file in the top-level directory.
 ------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   Contributing author:
+   Anton Gladky(TU Bergakademie Freiberg), gladky.anton@gmail.com
+------------------------------------------------------------------------- */
+
 #ifdef LAMMPS_VTK
 #ifdef DUMP_CLASS
 
@@ -66,13 +71,12 @@ class DumpATOMVTK : public Dump {
   int count();
   void pack(int *);
   void write_data(int, double *);
-  
+
   typedef Eigen::Matrix<double, 3, 1> V3;
   int n_calls_;
   char * filecurrent;
   void setFileCurrent();
-  
-  
+
   class DataVTK {
     public:
       V3 _Pos;
@@ -87,7 +91,7 @@ class DumpATOMVTK : public Dump {
       DataVTK(V3, double, double, int, int, V3, V3, V3, int);
       std::string serialize();
   };
-  
+
   class vtkExportData {
     private:
       std::vector<DumpATOMVTK::DataVTK> vtkData;
@@ -103,9 +107,9 @@ class DumpATOMVTK : public Dump {
       void show();
       void clear();
   };
-  
+
   vtkExportData tmpEXP;
-  
+
 };
 
 }

@@ -56,7 +56,7 @@ FixTemplateSphere::FixTemplateSphere(LAMMPS *lmp, int narg, char **arg) :
 
   // random number generator, same for all procs
   if (narg < 4) error->fix_error(FLERR,this,"not enough arguments");
-  seed = atoi(arg[3]);
+  seed = atoi(arg[3]) + comm->me;
   random = new RanPark(lmp,seed);
 
   iarg = 4;
@@ -231,8 +231,8 @@ FixTemplateSphere::FixTemplateSphere(LAMMPS *lmp, int narg, char **arg) :
 
   if(pdf_radius == NULL) error->fix_error(FLERR,this,"have to define 'radius'");
 
-  //set mass and volume
-  volume_expect = pow(2.*expectancy(pdf_radius),3.)*M_PI/6.;
+  // set mass and volume expectancy
+  volume_expect = cubic_expectancy(pdf_radius)*4.*M_PI/3.;
   mass_expect = expectancy(pdf_density) * volume_expect;
 }
 
@@ -419,7 +419,7 @@ void FixTemplateSphere::restart(char *buf)
   int n = 0;
   double *list = (double *) buf;
 
-  seed = static_cast<int> (list[n++]);
+  seed = static_cast<int> (list[n++]) + comm->me;
 
   random->reset(seed);
 }
