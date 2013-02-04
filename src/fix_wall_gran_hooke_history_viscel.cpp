@@ -96,7 +96,7 @@ void FixWallGranHookeHistoryViscEl::init_granular()
    contact model parameters derived for hertz model 
 ------------------------------------------------------------------------- */
 
-inline void FixWallGranHookeHistoryViscEl::deriveContactModelParams(int ip, double deltan,double meff_wall, double &kn, double &kt, double &gamman, double &gammat, double &xmu,double &rmu)  
+inline void FixWallGranHookeHistoryViscEl::deriveContactModelParams(int ip, double deltan,double meff_wall, double &kn, double &kt, double &gamman, double &gammat, double &xmu,double &rmu, double &vnnr) 
 {
     int itype = atom->type[ip];
 

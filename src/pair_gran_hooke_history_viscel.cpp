@@ -141,7 +141,7 @@ void PairGranHookeHistoryViscEl::allocate_properties(int size)
  return appropriate params
 ------------------------------------------------------------------------- */
 
-inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &jp,double &meff,double &deltan, double &kn, double &kt, double &gamman, double &gammat, double &xmu, double &rmu)
+inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &jp,double &meff,double &deltan, double &kn, double &kt, double &gamman, double &gammat, double &xmu, double &rmu, double &vnnr)
 {
     int itype = atom->type[ip];
     int jtype = atom->type[jp];

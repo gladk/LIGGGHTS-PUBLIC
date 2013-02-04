@@ -45,7 +45,7 @@ class FixWallGranHookeHistoryViscEl : public FixWallGranHookeHistory {
 
  protected:
 
-  virtual void deriveContactModelParams(int ip, double deltan, double meff_wall, double &kn, double &kt, double &gamman, double &gammat, double &xmu,double &rmu);
+  virtual void deriveContactModelParams(int, double, double, double &, double &, double &, double &, double &,double &, double &);
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
   double **k_n,**k_t,**gamma_n,**gamma_t;
   int damp_massflag;
