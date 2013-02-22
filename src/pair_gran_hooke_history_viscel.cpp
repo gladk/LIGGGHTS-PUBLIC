@@ -54,9 +54,6 @@ PairGranHookeHistoryViscEl::~PairGranHookeHistoryViscEl()
     memory->destroy(k_t);
     memory->destroy(gamma_n);
     memory->destroy(gamma_t);
-
-    // do not destroy coeffFrict, coeffRollFrict, cohEnergyDens
-    // since are destroyed in ~PairGranHookeHistory()
 }
 
 /* ----------------------------------------------------------------------
@@ -86,14 +83,6 @@ void PairGranHookeHistoryViscEl::init_granular()
   e_n1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("en","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   e_t1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("et","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   
-  
-  
-  if(rollingflag)
-    coeffRollFrict1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("coefficientRollingFriction","property/global","peratomtypepair",max_type,max_type,force->pair_style));
-
-  if(cohesionflag)
-    cohEnergyDens1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("cohesionEnergyDensity","property/global","peratomtypepair",max_type,max_type,force->pair_style));
-  
   double mpi2 = M_PI*M_PI;
   
   //pre-calculate parameters for possible contact material combinations
@@ -108,9 +97,6 @@ void PairGranHookeHistoryViscEl::init_granular()
           gamma_t[i][j] = -2.0/7.0*log(e_t1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
           
           coeffFrict[i][j] = coeffFrict1->compute_array(i-1,j-1);
-          if(rollingflag) coeffRollFrict[i][j] = coeffRollFrict1->compute_array(i-1,j-1);
-
-          if(cohesionflag) cohEnergyDens[i][j] = cohEnergyDens1->compute_array(i-1,j-1);
       }
   }
 }
@@ -127,9 +113,6 @@ void PairGranHookeHistoryViscEl::allocate_properties(int size)
     memory->destroy(gamma_t);
 
     memory->destroy(coeffFrict);
-    memory->destroy(coeffRollFrict);
-
-    memory->destroy(cohEnergyDens);
 
     memory->create(k_n,size+1,size+1,"kn");
     memory->create(k_t,size+1,size+1,"kt");
@@ -137,9 +120,6 @@ void PairGranHookeHistoryViscEl::allocate_properties(int size)
     memory->create(gamma_t,size+1,size+1,"gammat");
 
     memory->create(coeffFrict,size+1,size+1,"coeffFrict");
-    memory->create(coeffRollFrict,size+1,size+1,"coeffRollFrict");
-
-    memory->create(cohEnergyDens,size+1,size+1,"cohEnergyDens");
 }
 
 /* ----------------------------------------------------------------------
@@ -160,7 +140,6 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
     gammat = meff*gamma_t[itype][jtype];
 
     xmu=coeffFrict[itype][jtype];
-    if(rollingflag)rmu=coeffRollFrict[itype][jtype];
     if (dampflag == 0) gammat = 0.0;
 
     // convert Kn and Kt from pressure units to force/distance^2
