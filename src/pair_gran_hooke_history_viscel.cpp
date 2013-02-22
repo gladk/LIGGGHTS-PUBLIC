@@ -19,6 +19,11 @@
    See the README file in the top-level directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author (2012):
+   Anton Gladky(TU Bergakademie Freiberg), gladky.anton@gmail.com
+------------------------------------------------------------------------- */
+
 #include "math.h"
 #include "stdio.h"
 #include "stdlib.h"

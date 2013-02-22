@@ -24,6 +24,11 @@
    Contributing authors for original version: Leo Silbert (SNL), Gary Grest (SNL)
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author (2012):
+   Anton Gladky(TU Bergakademie Freiberg), gladky.anton@gmail.com
+------------------------------------------------------------------------- */
+
 #ifdef FIX_CLASS
 
 FixStyle(wall/gran/hooke/history/viscel,FixWallGranHookeHistoryViscEl)

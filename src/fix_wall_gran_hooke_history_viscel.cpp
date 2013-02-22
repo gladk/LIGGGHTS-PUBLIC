@@ -24,6 +24,12 @@
    Contributing authors for original version: Leo Silbert (SNL), Gary Grest (SNL)
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author (2012):
+   Anton Gladky(TU Bergakademie Freiberg), gladky.anton@gmail.com
+------------------------------------------------------------------------- */
+
+
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"

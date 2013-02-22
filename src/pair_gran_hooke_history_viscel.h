@@ -20,6 +20,11 @@
    See the README file in the top-level directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author (2012):
+   Anton Gladky(TU Bergakademie Freiberg), gladky.anton@gmail.com
+------------------------------------------------------------------------- */
+
 
 /*
  * The class is based on the following article:
