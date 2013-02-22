@@ -90,6 +90,27 @@ void PairGranHookeHistoryViscEl::init_granular()
   {
       for(int j=1;j<max_type+1;j++)
       {
+        /*
+         *  Bibtex-entry, 
+         * https://github.com/yade/trunk/blob/master/doc/references.bib#L154
+         * ============================================
+         @Article{ Pournin2001,
+         title = "Molecular-dynamics force models for better control of energy dissipation in numerical simulations of dense granular media",
+         author = "L. Pournin and Th. M. Liebling and A. Mocellin",
+         journal = "Phys. Rev. E",
+         volume = "65",
+         number = "1",
+         pages = "011302",
+         numpages = "7",
+         year = "2001",
+         month = "Dec",
+         doi = "10.1103/PhysRevE.65.011302",
+         publisher = "American Physical Society"
+         *============================================
+         * pre.aps.org/abstract/PRE/v65/i1/e011302
+         * 
+         * Used formula (22)
+         */
           
           k_n[i][j] = (mpi2 + pow(log(e_n1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
           k_t[i][j] = 2.0/7.0*(mpi2 + pow(log(e_t1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
