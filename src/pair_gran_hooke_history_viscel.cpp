@@ -133,8 +133,17 @@ void PairGranHookeHistoryViscEl::init_granular()
            */
            
            GammaCapillar[i][j] = Gamma1->compute_array(i-1,j-1);
-           ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1);
+           ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1)*3.14159265/180.0;
            VBCapillar[i][j] = VB1->compute_array(i-1,j-1);
+           
+           
+           if ((GammaCapillar[i][j]>=0) and ((ThetaCapillar[i][j]>=0.0) and (ThetaCapillar[i][j]<90.0)) and (VBCapillar[i][j] > 0.0)) {
+             cohesionflag = 1;
+             error->message(FLERR,"Capillar mode IS activated!");
+           } else {
+             error->message(FLERR,"Capillar mode is NOT activated!");
+           }
+             
       }
   }
 }
@@ -159,6 +168,7 @@ void PairGranHookeHistoryViscEl::allocate_properties(int size)
     memory->create(k_t,size+1,size+1,"kt");
     memory->create(gamma_n,size+1,size+1,"gamman");
     memory->create(gamma_t,size+1,size+1,"gammat");
+    
     memory->create(GammaCapillar,size+1,size+1,"gammacapillar");
     memory->create(ThetaCapillar,size+1,size+1,"thetacapillar");
     memory->create(VBCapillar,size+1,size+1,"vbcapillar");
@@ -174,8 +184,6 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
 {
     int itype = atom->type[ip];
     int jtype = atom->type[jp];
-    
-
           
     kn = meff*k_n[itype][jtype];
     kt = meff*k_t[itype][jtype];
@@ -189,7 +197,22 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
     // convert Kn and Kt from pressure units to force/distance^2
     kn /= force->nktv2p;
     kt /= force->nktv2p;
-
+    
+    /*
+    char buffer [50]; 
+    int n; 
+    double ri = atom->radius[ip];
+    double rj = atom->radius[jp];
+    //n=sprintf (buffer, "ri = %f,  rj = %f", ri, rj); 
+    //error->message(FLERR,buffer);
+    if (ri != rj) {
+        error->all(FLERR,"Only monodisperse medium can be calculated in capillar mode!");
+    }
+    */
+    
+    
+    //SCritCapillar = 1.0;
+    
     return;
 }
 /* ---------------------------------------------------------------------- */
@@ -199,11 +222,39 @@ inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double
     //r is the distance between the sphere's centeres
     double ri = atom->radius[ip];
     double rj = atom->radius[jp];
+    int itype = atom->type[ip];
+    int jtype = atom->type[jp];
+    /*
     double Acont;
     if(cohesionflag == 1)
      Acont = - M_PI/4 * ( (r-ri-rj)*(r+ri-rj)*(r-ri+rj)*(r+ri+rj) )/(r*r); //contact area of the two spheres
     else  Acont = M_PI * 2. * (2.*ri*rj/(ri+rj)) * (ri + rj - r);
     
     Fn_coh=cohEnergyDens[atom->type[ip]][atom->type[jp]]*Acont;
+    */ 
+    
+    //char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", ri, rj); error->message(FLERR,buffer);
+    
+    
+    double c0 = 0.96;
+    double c1 = 1.1;
+    double R = ri;
+    double s = r-ri-rj;
+    
+    if (s>0) {
+      char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", s, r); error->message(FLERR,buffer);  
+    } 
+    
+    
+    double beta = asin(pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0));
+    double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
+    double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
+    double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
+    
+    /*
+    double fC = 2*M_PI*phys.gamma*R*sin(beta)*sin(beta+phys.theta) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+    */
+    
+    Fn_coh=0.0;
 }
 
