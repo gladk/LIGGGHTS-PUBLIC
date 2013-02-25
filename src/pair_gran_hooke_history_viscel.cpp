@@ -43,7 +43,7 @@ using namespace LAMMPS_NS;
 
 PairGranHookeHistoryViscEl::PairGranHookeHistoryViscEl(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 {
-    k_n = k_t = gamma_n = gamma_t = NULL;
+    k_n = k_t = gamma_n = gamma_t = GammaCapillar = ThetaCapillar = VBCapillar = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -54,6 +54,9 @@ PairGranHookeHistoryViscEl::~PairGranHookeHistoryViscEl()
     memory->destroy(k_t);
     memory->destroy(gamma_n);
     memory->destroy(gamma_t);
+    memory->destroy(GammaCapillar);
+    memory->destroy(ThetaCapillar);
+    memory->destroy(VBCapillar);
 }
 
 /* ----------------------------------------------------------------------
@@ -82,6 +85,10 @@ void PairGranHookeHistoryViscEl::init_granular()
   tc1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("tc","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   e_n1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("en","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   e_t1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("et","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+  
+  Gamma1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Gamma","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+  Theta1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Theta","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+  VB1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("VB","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   
   double mpi2 = M_PI*M_PI;
   
@@ -118,6 +125,16 @@ void PairGranHookeHistoryViscEl::init_granular()
           gamma_t[i][j] = -2.0/7.0*log(e_t1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
           
           coeffFrict[i][j] = coeffFrict1->compute_array(i-1,j-1);
+          
+          
+          /*Capillar
+           * 
+           * 
+           */
+           
+           GammaCapillar[i][j] = Gamma1->compute_array(i-1,j-1);
+           ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1);
+           VBCapillar[i][j] = VB1->compute_array(i-1,j-1);
       }
   }
 }
@@ -132,6 +149,9 @@ void PairGranHookeHistoryViscEl::allocate_properties(int size)
     memory->destroy(k_t);
     memory->destroy(gamma_n);
     memory->destroy(gamma_t);
+    memory->destroy(GammaCapillar);
+    memory->destroy(ThetaCapillar);
+    memory->destroy(VBCapillar);
 
     memory->destroy(coeffFrict);
 
@@ -139,6 +159,9 @@ void PairGranHookeHistoryViscEl::allocate_properties(int size)
     memory->create(k_t,size+1,size+1,"kt");
     memory->create(gamma_n,size+1,size+1,"gamman");
     memory->create(gamma_t,size+1,size+1,"gammat");
+    memory->create(GammaCapillar,size+1,size+1,"gammacapillar");
+    memory->create(ThetaCapillar,size+1,size+1,"thetacapillar");
+    memory->create(VBCapillar,size+1,size+1,"vbcapillar");
 
     memory->create(coeffFrict,size+1,size+1,"coeffFrict");
 }
@@ -169,3 +192,18 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
 
     return;
 }
+/* ---------------------------------------------------------------------- */
+
+inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double &r, double &Fn_coh) 
+{
+    //r is the distance between the sphere's centeres
+    double ri = atom->radius[ip];
+    double rj = atom->radius[jp];
+    double Acont;
+    if(cohesionflag == 1)
+     Acont = - M_PI/4 * ( (r-ri-rj)*(r+ri-rj)*(r-ri+rj)*(r+ri+rj) )/(r*r); //contact area of the two spheres
+    else  Acont = M_PI * 2. * (2.*ri*rj/(ri+rj)) * (ri + rj - r);
+    
+    Fn_coh=cohEnergyDens[atom->type[ip]][atom->type[jp]]*Acont;
+}
+

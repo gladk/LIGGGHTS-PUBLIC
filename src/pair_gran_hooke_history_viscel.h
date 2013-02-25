@@ -61,10 +61,15 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
  protected:
   virtual void allocate_properties(int);
   virtual void deriveContactModelParams(int &, int &,double &, double &, double &,double &, double &, double &, double &, double &, double &);
+  virtual void addCohesionForce(int &, int &,double &,double &);
 
   //stiffness and damp parameters
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
   double **k_n,**k_t,**gamma_n,**gamma_t;
+  
+  //capillary parameters
+  class FixPropertyGlobal *Gamma1, *Theta1, *VB1;
+  double **GammaCapillar, **ThetaCapillar, **VBCapillar;
   
   int damp_massflag;
 };
