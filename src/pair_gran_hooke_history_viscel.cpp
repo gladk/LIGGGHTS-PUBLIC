@@ -29,13 +29,17 @@
 #include "stdlib.h"
 #include "string.h"
 #include "pair_gran_hooke_history_viscel.h"
+#include "compute_pair_gran_local.h"
 #include "atom.h"
 #include "force.h"
 #include "memory.h"
+#include "update.h"
 #include "modify.h"
 #include "error.h"
 #include "fix_property_global.h"
 #include "mech_param_gran.h"
+
+#include <Eigen/Core>
 
 using namespace LAMMPS_NS;
 
@@ -217,22 +221,14 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
 }
 /* ---------------------------------------------------------------------- */
 
-inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double &r, double &Fn_coh) 
-{
+inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
+  if (touch>0) {
     //r is the distance between the sphere's centeres
     double ri = atom->radius[ip];
     double rj = atom->radius[jp];
     int itype = atom->type[ip];
     int jtype = atom->type[jp];
-    /*
-    double Acont;
-    if(cohesionflag == 1)
-     Acont = - M_PI/4 * ( (r-ri-rj)*(r+ri-rj)*(r-ri+rj)*(r+ri+rj) )/(r*r); //contact area of the two spheres
-    else  Acont = M_PI * 2. * (2.*ri*rj/(ri+rj)) * (ri + rj - r);
-    
-    Fn_coh=cohEnergyDens[atom->type[ip]][atom->type[jp]]*Acont;
-    */ 
-    
+    double r = sqrt(rsq);
     //char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", ri, rj); error->message(FLERR,buffer);
     
     
@@ -241,19 +237,61 @@ inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double
     double R = ri;
     double s = r-ri-rj;
     
-    if (s>0) {
-      char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", s, r); error->message(FLERR,buffer);  
-    } 
+    double sCrit = (1+0.5*ThetaCapillar[itype][jtype])*pow(VBCapillar[itype][jtype],1/3.0);
     
+    if (s<sCrit) {
+      
+      double **f = atom->f;
+      double **x = atom->x;
+      
+      Eigen::Vector3f normV = Eigen::Vector3f(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
+      normV.normalize();
+      
+      //char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", s, r); error->message(FLERR,buffer);  
+      double beta = asin(pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0));
+      double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
+      double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
+      double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
+      double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+      
+      Eigen::Vector3f fCV = -fC*normV;
+      
+      if(computeflag)
+      {
+        f[ip][0] += fCV(0);
+        f[ip][1] += fCV(1);
+        f[ip][2] += fCV(2);
+      };
+      
+      if (jp < atom->nlocal && computeflag) {
+        f[jp][0] -= fCV(0);
+        f[jp][1] -= fCV(1);
+        f[jp][2] -= fCV(2);
+      };
+      
+      
+      //char buffer [50]; int n;n=sprintf (buffer, "s=%f;  sCrit=%f, step = %d", s, sCrit, update->ntimestep); error->message(FLERR,buffer);
+      //n=sprintf (buffer, "f [%f, %f, %f]", fCV(0), fCV(1), fCV(2)); error->message(FLERR,buffer);
+      
+      if(cpl && addflag) {
+        char buffer [50]; int s;s=sprintf (buffer, "i=%d j=%d; %f, %f, %f", ip, jp, fCV(0),fCV(1),fCV(2)); error->message(FLERR,buffer);
+        cpl->add_pair(ip,jp,fCV(0),fCV(1),fCV(2),0,0,0,0);
+      }
+      return false;
+    } else {
+      touch = 0;
+      //char buffer [50]; int n;n=sprintf (buffer, "s=%f;  sCrit=%f!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", s, sCrit); error->message(FLERR,buffer);
+      return true;
+    }
+    //error->message(FLERR,"O0000000000000000000000000000000000000000000000000000000000000!");
+  }
+  
+  return false;
+}
+/* ---------------------------------------------------------------------- */
+
+inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double &r, double &Fn_coh) 
+{
     
-    double beta = asin(pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0));
-    double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
-    double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
-    double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
-    
-    
-    double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
-    
-    Fn_coh=fC;
 }
 
