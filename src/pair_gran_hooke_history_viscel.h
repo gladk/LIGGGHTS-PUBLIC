@@ -62,6 +62,7 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   virtual void allocate_properties(int);
   virtual void deriveContactModelParams(int &, int &,double &, double &, double &,double &, double &, double &, double &, double &, double &);
   virtual void addCohesionForce(int &, int &,double &,double &);
+  virtual void compute_force(int &, int &, int &);
 
   //stiffness and damp parameters
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;

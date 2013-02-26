@@ -133,7 +133,7 @@ void PairGranHookeHistoryViscEl::init_granular()
            */
            
            GammaCapillar[i][j] = Gamma1->compute_array(i-1,j-1);
-           ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1)*3.14159265/180.0;
+           ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1)*M_PI/180.0;
            VBCapillar[i][j] = VB1->compute_array(i-1,j-1);
            
            
@@ -251,10 +251,9 @@ inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double
     double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
     double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
     
-    /*
-    double fC = 2*M_PI*phys.gamma*R*sin(beta)*sin(beta+phys.theta) + M_PI*R*R*Pc*sin(beta)*sin(beta);
-    */
     
-    Fn_coh=0.0;
+    double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+    
+    Fn_coh=fC;
 }
 
