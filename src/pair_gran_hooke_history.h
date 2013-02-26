@@ -83,7 +83,7 @@ class PairGranHookeHistory : public PairGran {
   virtual void deriveContactModelParams(int &ip, int &jp,double &meff,double &deltan, double &kn, double &kt, double &gamman, double &gammat, double &xmu, double &rmu,double &vnnr);
   virtual void addCohesionForce(int &, int &,double &,double &);
   
-  virtual bool breakContact(int &, int &, double &, int &);
+  virtual bool breakContact(int &, int &, double &, int &, int &);
 
   int cohesionflag; 
   int dampflag,rollingflag,viscousflag; 
