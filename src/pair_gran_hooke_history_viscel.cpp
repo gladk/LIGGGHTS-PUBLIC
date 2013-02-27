@@ -247,7 +247,6 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
       Eigen::Vector3f normV = Eigen::Vector3f(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();
       
-      //char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", s, r); error->message(FLERR,buffer);  
       double beta = asin(pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0));
       double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
       double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
@@ -268,19 +267,11 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
         f[jp][1] -= fCV(1);
         f[jp][2] -= fCV(2);
       };
-      
-      
-      //char buffer [50]; int n;n=sprintf (buffer, "s=%f;  sCrit=%f, step = %d", s, sCrit, update->ntimestep); error->message(FLERR,buffer);
-      //n=sprintf (buffer, "f [%f, %f, %f]", fCV(0), fCV(1), fCV(2)); error->message(FLERR,buffer);
-      
-      if(cpl && addflag) {
-        char buffer [50]; int s;s=sprintf (buffer, "i=%d j=%d; %f, %f, %f", ip, jp, fCV(0),fCV(1),fCV(2)); error->message(FLERR,buffer);
-        cpl->add_pair(ip,jp,fCV(0),fCV(1),fCV(2),0,0,0,0);
-      }
+      //char buffer [500]; int dd;dd=sprintf (buffer, "s=%f;  sCrit=%f!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", s, sCrit); error->message(FLERR,buffer);
+      //char buffer [500]; int dd;dd=sprintf (buffer, "beta=%f; r1=%f; r2=%f; Pc=%f; fC=%f; R=%f; Theta=%f; Gamma=%f; s=%f; sC=%f; ", beta, r1, r2, Pc, fC, R, ThetaCapillar[itype][jtype], GammaCapillar[itype][jtype], s, sCrit); error->message(FLERR,buffer);
       return false;
     } else {
       touch = 0;
-      //char buffer [50]; int n;n=sprintf (buffer, "s=%f;  sCrit=%f!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", s, sCrit); error->message(FLERR,buffer);
       return true;
     }
     //error->message(FLERR,"O0000000000000000000000000000000000000000000000000000000000000!");

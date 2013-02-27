@@ -236,7 +236,7 @@ void PairGranHookeHistory::compute_force(int eflag, int vflag,int addflag)
       if (rsq >= radsum*radsum) {
 
         // unset non-touching neighbors
-        if (breakContact(i, j, rsq, touch[jj], addflag)) {
+        if (touch[jj] and (breakContact(i, j, rsq, touch[jj], addflag))) {
           touch[jj] = 0;
           shear = &allshear[dnum_pairgran*jj];
           shear[0] = 0.0;
