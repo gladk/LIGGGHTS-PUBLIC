@@ -38,7 +38,8 @@
 #include "error.h"
 #include "fix_property_global.h"
 #include "mech_param_gran.h"
-
+#include <iostream>
+#include <fstream>
 #include <Eigen/Core>
 
 using namespace LAMMPS_NS;
@@ -142,10 +143,11 @@ void PairGranHookeHistoryViscEl::init_granular()
            
            
            if ((GammaCapillar[i][j]>=0) and ((ThetaCapillar[i][j]>=0.0) and (ThetaCapillar[i][j]<90.0)) and (VBCapillar[i][j] > 0.0)) {
-             cohesionflag = 1;
-             error->message(FLERR,"Capillar mode IS activated!");
+             capillarFlag = true;
+             error->message(FLERR,"Capillar mode ACTIVATED!");
            } else {
-             error->message(FLERR,"Capillar mode is NOT activated!");
+             capillarFlag = false;
+             error->message(FLERR,"Capillar mode DISABLED!");
            }
              
       }
@@ -202,35 +204,22 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
     kn /= force->nktv2p;
     kt /= force->nktv2p;
     
-    /*
-    char buffer [50]; 
-    int n; 
-    double ri = atom->radius[ip];
-    double rj = atom->radius[jp];
-    //n=sprintf (buffer, "ri = %f,  rj = %f", ri, rj); 
-    //error->message(FLERR,buffer);
-    if (ri != rj) {
-        error->all(FLERR,"Only monodisperse medium can be calculated in capillar mode!");
-    }
-    */
-    
-    
-    //SCritCapillar = 1.0;
-    
     return;
 }
 /* ---------------------------------------------------------------------- */
 
 inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
-  if (touch>0) {
+  if (touch>0 and capillarFlag) {
     //r is the distance between the sphere's centeres
     double ri = atom->radius[ip];
     double rj = atom->radius[jp];
     int itype = atom->type[ip];
     int jtype = atom->type[jp];
     double r = sqrt(rsq);
-    //char buffer [50]; int n;n=sprintf (buffer, "ri = %f,  rj = %f", ri, rj); error->message(FLERR,buffer);
     
+    if (ri != rj) {
+      error->all(FLERR,"Only monodisperse medium can be calculated in capillar mode!");
+    }
     
     double c0 = 0.96;
     double c1 = 1.1;
@@ -240,7 +229,6 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
     double sCrit = (1+0.5*ThetaCapillar[itype][jtype])*pow(VBCapillar[itype][jtype],1/3.0);
     
     if (s<sCrit) {
-      
       double **f = atom->f;
       double **x = atom->x;
       
@@ -267,22 +255,30 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
         f[jp][1] -= fCV(1);
         f[jp][2] -= fCV(2);
       };
-      //char buffer [500]; int dd;dd=sprintf (buffer, "s=%f;  sCrit=%f!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", s, sCrit); error->message(FLERR,buffer);
-      //char buffer [500]; int dd;dd=sprintf (buffer, "beta=%f; r1=%f; r2=%f; Pc=%f; fC=%f; R=%f; Theta=%f; Gamma=%f; s=%f; sC=%f; ", beta, r1, r2, Pc, fC, R, ThetaCapillar[itype][jtype], GammaCapillar[itype][jtype], s, sCrit); error->message(FLERR,buffer);
+      
+      /*
+      std::ofstream outfile;
+      outfile.open("post/outcapilalarforce", std::ios::app);
+      double fCV2 = fC/(2.0*M_PI*R*GammaCapillar[itype][jtype]);
+      double s2 = s*sqrt(R/VBCapillar[itype][jtype]);
+      
+      if (outfile.is_open()) {
+        outfile << s2 << "\t" << fCV2 << std::endl;
+      }
+      outfile.close();
+      
+      char buffer [500]; int dd;dd=sprintf (buffer, "s=%f;  sCrit=%f!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", s, sCrit); error->message(FLERR,buffer);
+      char buffer [500]; int dd;dd=sprintf (buffer, "beta=%f; r1=%f; r2=%f; Pc=%f; fC=%f; R=%f; Theta=%f; Gamma=%f; s=%f; sC=%f; ", beta, r1, r2, Pc, fC, R, ThetaCapillar[itype][jtype], GammaCapillar[itype][jtype], s, sCrit); error->message(FLERR,buffer);
+      error->message(FLERR,"O0000000000000000000000000000000000000000000000000000000000000!");
+      */ 
+      
       return false;
     } else {
       touch = 0;
       return true;
     }
-    //error->message(FLERR,"O0000000000000000000000000000000000000000000000000000000000000!");
   }
   
-  return false;
-}
+  return true;
+};
 /* ---------------------------------------------------------------------- */
-
-inline void PairGranHookeHistoryViscEl::addCohesionForce(int &ip, int &jp,double &r, double &Fn_coh) 
-{
-    
-}
-
