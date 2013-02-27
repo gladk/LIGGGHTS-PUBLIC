@@ -71,7 +71,24 @@ PairGranHookeHistoryViscEl::~PairGranHookeHistoryViscEl()
 void PairGranHookeHistoryViscEl::settings(int narg, char **arg) 
 {
     PairGranHookeHistory::settings(narg,arg);
-    
+    capillarFlag  = false;
+    bool hasargs = true;
+    while(iarg_ < narg && hasargs)
+    {
+        hasargs = false;
+        if (strcmp(arg[iarg_],"capilarity") == 0) {
+            if (narg < iarg_+2) error->all(FLERR,"Pair gran: not enough arguments for 'capilarity'");
+            iarg_++;
+            if(strcmp(arg[iarg_],"off") == 0)
+                capillarFlag = false;
+            else if(strcmp(arg[iarg_],"on") == 0)
+                capillarFlag = true;
+            else
+                error->all(FLERR,"Illegal pair_style gran command, expecting 'on' or 'off' after keyword 'capilarity'");
+            iarg_++;
+            hasargs = true;
+        }
+    }
 }
 
 /* ----------------------------------------------------------------------
@@ -91,9 +108,11 @@ void PairGranHookeHistoryViscEl::init_granular()
   e_n1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("en","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   e_t1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("et","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   
-  Gamma1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Gamma","property/global","peratomtypepair",max_type,max_type,force->pair_style));
-  Theta1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Theta","property/global","peratomtypepair",max_type,max_type,force->pair_style));
-  VB1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("VB","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+  if (capillarFlag)  {
+    Gamma1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Gamma","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+    Theta1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Theta","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+    VB1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("VB","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+  }
   
   double mpi2 = M_PI*M_PI;
   
@@ -137,16 +156,20 @@ void PairGranHookeHistoryViscEl::init_granular()
            * 
            */
            
-           GammaCapillar[i][j] = Gamma1->compute_array(i-1,j-1);
-           ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1)*M_PI/180.0;
-           VBCapillar[i][j] = VB1->compute_array(i-1,j-1);
+           if (capillarFlag)  {
+             GammaCapillar[i][j] = Gamma1->compute_array(i-1,j-1);
+             ThetaCapillar[i][j] = Theta1->compute_array(i-1,j-1)*M_PI/180.0;
+             VBCapillar[i][j] = VB1->compute_array(i-1,j-1);
            
            
-           if ((GammaCapillar[i][j]>=0) and ((ThetaCapillar[i][j]>=0.0) and (ThetaCapillar[i][j]<90.0)) and (VBCapillar[i][j] > 0.0)) {
-             capillarFlag = true;
-             error->message(FLERR,"Capillar mode ACTIVATED!");
+             if ((GammaCapillar[i][j]>=0) and ((ThetaCapillar[i][j]>=0.0) and (ThetaCapillar[i][j]<90.0)) and (VBCapillar[i][j] > 0.0)) {
+               capillarFlag = true;
+               error->message(FLERR,"Capillar mode ACTIVATED!");
+             } else {
+               capillarFlag = false;
+               error->message(FLERR,"Capillar mode DISABLED!");
+             }
            } else {
-             capillarFlag = false;
              error->message(FLERR,"Capillar mode DISABLED!");
            }
              
