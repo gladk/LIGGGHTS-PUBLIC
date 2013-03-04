@@ -61,7 +61,7 @@ using namespace FixConst;
 FixWallGranHookeHistoryViscEl::FixWallGranHookeHistoryViscEl(LAMMPS *lmp, int narg, char **arg) :
   FixWallGranHookeHistory(lmp, narg, arg)
 {
-    k_n = k_t = gamma_n = gamma_t = NULL;
+    k_n = k_t = gamma_n = gamma_t = GammaCapillar = ThetaCapillar = VBCapillar = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -74,6 +74,10 @@ void FixWallGranHookeHistoryViscEl::init_granular()
   gamma_t = ((PairGranHookeHistoryViscEl*)pairgran_)->gamma_t;
   coeffFrict = ((PairGranHookeHistoryViscEl*)pairgran_)->coeffFrict;
   coeffRollFrict = ((PairGranHookeHistoryViscEl*)pairgran_)->coeffRollFrict;
+  
+  GammaCapillar = ((PairGranHookeHistoryViscEl*)pairgran_)->GammaCapillar;
+  ThetaCapillar = ((PairGranHookeHistoryViscEl*)pairgran_)->ThetaCapillar;
+  VBCapillar = ((PairGranHookeHistoryViscEl*)pairgran_)->VBCapillar;
 
   damp_massflag = ((PairGranHookeHistoryViscEl*)pairgran_)->damp_massflag;
 
@@ -104,4 +108,8 @@ inline void FixWallGranHookeHistoryViscEl::deriveContactModelParams(int ip, doub
     kn /= force->nktv2p;
     kt /= force->nktv2p;
     return;
+}
+
+inline bool FixWallGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
+    return true;
 }

@@ -53,6 +53,15 @@ class FixWallGranHookeHistoryViscEl : public FixWallGranHookeHistory {
   virtual void deriveContactModelParams(int, double, double, double &, double &, double &, double &, double &,double &, double &);
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
   double **k_n,**k_t,**gamma_n,**gamma_t;
+  
+  virtual bool breakContact(int &, int &, double &, int &, int &);
+  
+  //capillary parameters
+  class FixPropertyGlobal *Gamma1, *Theta1, *VB1;
+  double **GammaCapillar, **ThetaCapillar, **VBCapillar;
+  
+  bool capillarFlag;
+  
   int damp_massflag;
 };
 
