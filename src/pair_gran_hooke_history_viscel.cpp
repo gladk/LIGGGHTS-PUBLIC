@@ -258,27 +258,30 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
       Eigen::Vector3f normV = Eigen::Vector3f(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();
       
-      double beta = asin(pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0));
-      double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
-      double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
-      double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
-      double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+      double sinBeta = pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0);
       
-      Eigen::Vector3f fCV = -fC*normV;
-      
-      if(computeflag)
-      {
-        f[ip][0] += fCV(0);
-        f[ip][1] += fCV(1);
-        f[ip][2] += fCV(2);
-      };
-      
-      if (jp < atom->nlocal && computeflag) {
-        f[jp][0] -= fCV(0);
-        f[jp][1] -= fCV(1);
-        f[jp][2] -= fCV(2);
-      };
-      
+      if ((sinBeta>0.0 and sinBeta<1.0) and (ThetaCapillar[itype][jtype] > 0.0 and (ThetaCapillar[itype][jtype] <M_PI/2.0))) {
+        double beta = asin(sinBeta);
+        double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
+        double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
+        double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
+        double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+        
+        Eigen::Vector3f fCV = -fC*normV;
+        
+        if(computeflag)
+        {
+          f[ip][0] += fCV(0);
+          f[ip][1] += fCV(1);
+          f[ip][2] += fCV(2);
+        };
+        
+        if (jp < atom->nlocal && computeflag) {
+          f[jp][0] -= fCV(0);
+          f[jp][1] -= fCV(1);
+          f[jp][2] -= fCV(2);
+        };
+      }
       /*
       std::ofstream outfile;
       outfile.open("post/outcapilalarforce", std::ios::app);
