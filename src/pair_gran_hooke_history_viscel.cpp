@@ -281,6 +281,14 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
           f[jp][1] -= fCV(1);
           f[jp][2] -= fCV(2);
         };
+      } else {
+        touch = 0;
+        if (not(sinBeta>0.0 and sinBeta<1.0)){
+          error->warning(FLERR,"The Beta is in illegal region!");
+        }  else if (not(ThetaCapillar[itype][jtype] > 0.0 and (ThetaCapillar[itype][jtype] <M_PI/2.0))) {
+          error->warning(FLERR,"The Theta is in illegal region!");
+        }
+        return true;
       }
       /*
       std::ofstream outfile;
