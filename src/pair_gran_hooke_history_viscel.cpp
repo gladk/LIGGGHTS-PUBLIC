@@ -264,7 +264,7 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
         double beta = asin(sinBeta);
         double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
         double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
-        double Pc = GammaCapillar[itype][jtype]*(1/r1 - 1/r2);
+        double Pc = GammaCapillar[itype][jtype]*(1/r1 + 1/r2);
         double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
         
         Eigen::Vector3f fCV = -fC*normV;
@@ -285,7 +285,7 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
         touch = 0;
         if (not(sinBeta>0.0 and sinBeta<1.0)){
           error->warning(FLERR,"The Beta is in illegal region!");
-        }  else if (not(ThetaCapillar[itype][jtype] > 0.0 and (ThetaCapillar[itype][jtype] <M_PI/2.0))) {
+        }  else if (not(ThetaCapillar[itype][jtype] >= 0.0 and (ThetaCapillar[itype][jtype] < M_PI/2.0))) {
           error->warning(FLERR,"The Theta is in illegal region!");
         }
         return true;
