@@ -72,6 +72,8 @@ void PairGranHookeHistoryViscEl::settings(int narg, char **arg)
 {
     PairGranHookeHistory::settings(narg,arg);
     capillarFlag  = false;
+    capillarType  = Weigert;
+    
     bool hasargs = true;
     while(iarg_ < narg && hasargs)
     {
@@ -88,7 +90,24 @@ void PairGranHookeHistoryViscEl::settings(int narg, char **arg)
             iarg_++;
             hasargs = true;
         }
-    }
+        else if (strcmp(arg[iarg_],"capillarType") == 0) {
+            if (narg < iarg_+2) error->all(FLERR,"Pair gran: not enough arguments for 'capillar_type'");
+            iarg_++;
+            if(strcmp(arg[iarg_],"weigert") == 0)
+                capillarType  = Weigert;
+            else if(strcmp(arg[iarg_],"willett") == 0)
+                capillarType  = Willett;
+            else if(strcmp(arg[iarg_],"herminghaus") == 0)
+                capillarType  = Herminghaus;
+            else
+                error->all(FLERR,"Illegal pair_style gran command, expecting 'weigert', 'willett' or 'herminghaus' after keyword 'capillarType'");
+            iarg_++;
+            hasargs = true;
+        } else
+        {
+            error->all(FLERR,"unknown keyword");
+        }
+    }       
 }
 
 /* ----------------------------------------------------------------------
@@ -240,16 +259,18 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
     int jtype = atom->type[jp];
     double r = sqrt(rsq);
     
-    double c0 = 0.96;
-    double c1 = 1.1;
+    double **f = atom->f;
+    double **x = atom->x;
+    
     double R = 2 * ri * rj / (ri + rj);
     double s = (r-ri-rj);
     
     double sCrit = (1+0.5*ThetaCapillar[itype][jtype])*pow(VBCapillar[itype][jtype],1/3.0);
     
     if (s<sCrit) {
-      double **f = atom->f;
-      double **x = atom->x;
+      
+      double c0 = 0.96;
+      double c1 = 1.1;
       
       Eigen::Vector3f normV = Eigen::Vector3f(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();

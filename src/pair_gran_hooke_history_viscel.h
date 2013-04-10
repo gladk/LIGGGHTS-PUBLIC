@@ -73,6 +73,8 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   double **GammaCapillar, **ThetaCapillar, **VBCapillar;
   
   bool capillarFlag;
+  enum capillar_types_all { Weigert, Willett, Herminghaus };
+  capillar_types_all capillarType;
   
   int damp_massflag;
 };
