@@ -240,14 +240,10 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
     int jtype = atom->type[jp];
     double r = sqrt(rsq);
     
-    if (ri != rj) {
-      error->all(FLERR,"Only monodisperse medium can be calculated in capillar mode!");
-    }
-    
     double c0 = 0.96;
     double c1 = 1.1;
-    double R = ri;
-    double s = r-ri-rj;
+    double R = 2 * ri * rj / (ri + rj);
+    double s = (r-ri-rj);
     
     double sCrit = (1+0.5*ThetaCapillar[itype][jtype])*pow(VBCapillar[itype][jtype],1/3.0);
     
@@ -261,11 +257,16 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
       double sinBeta = pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0);
       
       if ((sinBeta>0.0 and sinBeta<1.0) and (ThetaCapillar[itype][jtype] > 0.0 and (ThetaCapillar[itype][jtype] <M_PI/2.0))) {
+        
+        
         double beta = asin(sinBeta);
         double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
         double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
         double Pc = GammaCapillar[itype][jtype]*(1/r1 + 1/r2);
         double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+        
+        
+        
         
         Eigen::Vector3f fCV = -fC*normV;
         
