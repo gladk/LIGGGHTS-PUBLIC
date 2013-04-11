@@ -264,8 +264,14 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
     
     double R = 2 * ri * rj / (ri + rj);
     double s = (r-ri-rj);
+    double Theta = ThetaCapillar[itype][jtype];
+    double Vb = VBCapillar[itype][jtype];
+    double VbS = Vb/(R*R*R);
+    double Gamma = GammaCapillar[itype][jtype];
     
-    double sCrit = (1+0.5*ThetaCapillar[itype][jtype])*pow(VBCapillar[itype][jtype],1/3.0);
+    double sCrit = (1+0.5*Theta)*pow(VBCapillar[itype][jtype],1/3.0);
+    
+    
     
     if (s<sCrit) {
       
@@ -275,22 +281,124 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
       Eigen::Vector3f normV = Eigen::Vector3f(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();
       
-      double sinBeta = pow(VBCapillar[itype][jtype]/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(ThetaCapillar[itype][jtype])))), 1.0/4.0);
       
-      if ((sinBeta>0.0 and sinBeta<1.0) and (ThetaCapillar[itype][jtype] > 0.0 and (ThetaCapillar[itype][jtype] <M_PI/2.0))) {
+      double fC = 0.0;
+      
+      if (capillarType == Weigert) {
+       /* Capillar model from Weigert
+       * http://onlinelibrary.wiley.com/doi/10.1002/%28SICI%291521-4117%28199910%2916:5%3C238::AID-PPSC238%3E3.0.CO;2-E/abstract
+       * 
+        ﻿@article {PPSC:PPSC238,
+        author = {Weigert, Tom and Ripperger, Siegfried},
+        title = {Calculation of the Liquid Bridge Volume and Bulk Saturation from the Half-filling Angle},
+        journal = {Particle & Particle Systems Characterization},
+        volume = {16},
+        number = {5},
+        publisher = {WILEY-VCH Verlag GmbH},
+        issn = {1521-4117},
+        url = {http://dx.doi.org/10.1002/(SICI)1521-4117(199910)16:5<238::AID-PPSC238>3.0.CO;2-E},
+        doi = {10.1002/(SICI)1521-4117(199910)16:5<238::AID-PPSC238>3.0.CO;2-E},
+        pages = {238--242},
+        year = {1999},
+        }
+        * 
+       */
+        double sinBeta = pow(Vb/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(Theta)))), 1.0/4.0);
+        if ((sinBeta>0.0 and sinBeta<1.0) and (Theta > 0.0 and (Theta <M_PI/2.0))) {
+          double beta = asin(sinBeta);
+          double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+Theta));
+          double r2 = R*sin(beta) + r1*(sin(beta+Theta)-1);
+          double Pc = Gamma*(1/r1 + 1/r2);
+          fC = 2*M_PI*Gamma*R*sin(beta)*sin(beta+Theta) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+        } else {
+          touch = 0;
+          if (not(sinBeta>0.0 and sinBeta<1.0)){
+            error->warning(FLERR,"The Beta is in illegal region!");
+          }  else if (not(Theta >= 0.0 and (Theta < M_PI/2.0))) {
+            error->warning(FLERR,"The Theta is in illegal region!");
+          }
+          return true;
+        }
+      }
+      else if (capillarType == Willett) {
+        double Th1 = Theta;
+        double Th2 = Th1*Th1;
+        double sPl = s/sqrt(Vb/R)/2.0;
+        
+        /*
+         * Willett, equations in Anhang
+        */
+        /* Capillar model from Willett
+         * http://pubs.acs.org/doi/abs/10.1021/la000657y
+         * 
+          @article{doi:10.1021/la000657y,
+          author = {Willett, Christopher D. and Adams, Michael J. and Johnson, Simon A. and Seville, Jonathan P. K.},
+          title = {Capillary Bridges between Two Spherical Bodies},
+          journal = {Langmuir},
+          volume = {16},
+          number = {24},
+          pages = {9396-9405},
+          year = {2000},
+          doi = {10.1021/la000657y},
+          
+          URL = {http://pubs.acs.org/doi/abs/10.1021/la000657y},
+          eprint = {http://pubs.acs.org/doi/pdf/10.1021/la000657y}
+          }
+         */ 
+        double f1 = (-0.44507 + 0.050832*Th1 - 1.1466*Th2) + 
+                  (-0.1119 - 0.000411*Th1 - 0.1490*Th2) * log(VbS) +
+                  (-0.012101 - 0.0036456*Th1 - 0.01255*Th2) *log(VbS)*log(VbS) +
+                  (-0.0005 - 0.0003505*Th1 - 0.00029076*Th2) *log(VbS)*log(VbS)*log(VbS);
+        
+        double f2 = (1.9222 - 0.57473*Th1 - 1.2918*Th2) +
+                  (-0.0668 - 0.1201*Th1 - 0.22574*Th2) * log(VbS) +
+                  (-0.0013375 - 0.0068988*Th1 - 0.01137*Th2) *log(VbS)*log(VbS);
+                  
+                  
+        double f3 = (1.268 - 0.01396*Th1 - 0.23566*Th2) +
+                  (0.198 + 0.092*Th1 - 0.06418*Th2) * log(VbS) +
+                  (0.02232 + 0.02238*Th1 - 0.009853*Th2) *log(VbS)*log(VbS) +
+                  (0.0008585 + 0.001318*Th1 - 0.00053*Th2) *log(VbS)*log(VbS)*log(VbS);
+        
+        double f4 = (-0.010703 + 0.073776*Th1 - 0.34742*Th2) +
+                  (0.03345 + 0.04543*Th1 - 0.09056*Th2) * log(VbS) +
+                  (0.0018574 + 0.004456*Th1 - 0.006257*Th2) *log(VbS)*log(VbS);
+  
         
         
-        double beta = asin(sinBeta);
-        double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+ThetaCapillar[itype][jtype]));
-        double r2 = R*sin(beta) + r1*(sin(beta+ThetaCapillar[itype][jtype])-1);
-        double Pc = GammaCapillar[itype][jtype]*(1/r1 + 1/r2);
-        double fC = 2*M_PI*GammaCapillar[itype][jtype]*R*sin(beta)*sin(beta+ThetaCapillar[itype][jtype]) + M_PI*R*R*Pc*sin(beta)*sin(beta);
+        double lnFS = f1 - f2*exp(f3*log(sPl) + f4*log(sPl)*log(sPl));
+        double FS = exp(lnFS);
         
+        fC = FS * 2.0 * M_PI* R * Gamma;
+      }
+      else if (capillarType == Herminghaus) {
+        double sPl = s/sqrt(Vb/R);
         
+        /* Capillar model from Herminghaus (Willett)
+         * http://www.tandfonline.com/doi/abs/10.1080/00018730500167855
+         * 
+          @article{doi:10.1080/00018730500167855,
+          author = {Herminghaus * , S.},
+          title = {Dynamics of wet granular matter},
+          journal = {Advances in Physics},
+          volume = {54},
+          number = {3},
+          pages = {221-261},
+          year = {2005},
+          doi = {10.1080/00018730500167855},
+          
+          URL = {http://www.tandfonline.com/doi/abs/10.1080/00018730500167855},
+          eprint = {http://www.tandfonline.com/doi/pdf/10.1080/00018730500167855}
+          }
+         */
+         
         
-        
+        fC = 2.0 * M_PI* R * Gamma * cos(Theta)/(1 + 1.05*sPl + 2.5 *sPl * sPl);         // Herminghaus, equation (7)
+      }
+      
+      
+      if (fC != 0.0) {
         Eigen::Vector3f fCV = -fC*normV;
-        
         if(computeflag)
         {
           f[ip][0] += fCV(0);
@@ -303,30 +411,7 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
           f[jp][1] -= fCV(1);
           f[jp][2] -= fCV(2);
         };
-      } else {
-        touch = 0;
-        if (not(sinBeta>0.0 and sinBeta<1.0)){
-          error->warning(FLERR,"The Beta is in illegal region!");
-        }  else if (not(ThetaCapillar[itype][jtype] >= 0.0 and (ThetaCapillar[itype][jtype] < M_PI/2.0))) {
-          error->warning(FLERR,"The Theta is in illegal region!");
-        }
-        return true;
       }
-      /*
-      std::ofstream outfile;
-      outfile.open("post/outcapilalarforce", std::ios::app);
-      double fCV2 = fC/(2.0*M_PI*R*GammaCapillar[itype][jtype]);
-      double s2 = s*sqrt(R/VBCapillar[itype][jtype]);
-      
-      if (outfile.is_open()) {
-        outfile << s2 << "\t" << fCV2 << std::endl;
-      }
-      outfile.close();
-      
-      char buffer [500]; int dd;dd=sprintf (buffer, "s=%f;  sCrit=%f!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", s, sCrit); error->message(FLERR,buffer);
-      char buffer [500]; int dd;dd=sprintf (buffer, "beta=%f; r1=%f; r2=%f; Pc=%f; fC=%f; R=%f; Theta=%f; Gamma=%f; s=%f; sC=%f; ", beta, r1, r2, Pc, fC, R, ThetaCapillar[itype][jtype], GammaCapillar[itype][jtype], s, sCrit); error->message(FLERR,buffer);
-      error->message(FLERR,"O0000000000000000000000000000000000000000000000000000000000000!");
-      */ 
       
       return false;
     } else {
