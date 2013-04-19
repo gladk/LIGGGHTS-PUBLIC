@@ -69,12 +69,13 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   double **k_n,**k_t,**gamma_n,**gamma_t;
   
   //capillary parameters
-  class FixPropertyGlobal *Gamma1, *Theta1, *VB1;
+  class FixPropertyGlobal *Gamma1, *Theta1, *VB1, *fstat1;
   double **GammaCapillar, **ThetaCapillar, **VBCapillar;
   
   bool capillarFlag;
   enum capillar_types_all { Weigert, Willett, Herminghaus };
   capillar_types_all capillarType;
+  double fstat;
   
   virtual void compute_force(int eflag, int vflag, int addflag);
   

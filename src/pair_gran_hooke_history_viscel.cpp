@@ -131,6 +131,12 @@ void PairGranHookeHistoryViscEl::init_granular()
   e_n1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("en","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   e_t1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("et","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   
+  //*fstat*********************************************************
+
+  fstat1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("fstat","property/global","scalar",max_type,max_type,force->pair_style));
+  
+  //*fstat*********************************************************
+
   if (capillarFlag)  {
     Gamma1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Gamma","property/global","peratomtypepair",max_type,max_type,force->pair_style));
     Theta1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Theta","property/global","peratomtypepair",max_type,max_type,force->pair_style));
@@ -138,6 +144,7 @@ void PairGranHookeHistoryViscEl::init_granular()
   }
   
   double mpi2 = M_PI*M_PI;
+  fstat = fstat1->compute_scalar();
   
   //pre-calculate parameters for possible contact material combinations
   for(int i=1;i< max_type+1; i++)
