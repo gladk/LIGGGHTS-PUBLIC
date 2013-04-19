@@ -164,11 +164,6 @@ inline void PairGranHookeHistory::deriveContactModelParams(int &ip, int &jp,doub
 
 /* ---------------------------------------------------------------------- */
 
-inline bool PairGranHookeHistory::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
-  return true;
-}
-/* ---------------------------------------------------------------------- */
-
 void PairGranHookeHistory::compute_force(int eflag, int vflag,int addflag)
 {
   //calculated from the material properties 
@@ -237,13 +232,13 @@ void PairGranHookeHistory::compute_force(int eflag, int vflag,int addflag)
       if (rsq >= radsum*radsum) {
 
         // unset non-touching neighbors
-        if (touch[jj] and (breakContact(i, j, rsq, touch[jj], addflag))) {
-          touch[jj] = 0;
-          shear = &allshear[dnum_pairgran*jj];
-          shear[0] = 0.0;
-          shear[1] = 0.0;
-          shear[2] = 0.0;
-        }
+
+        touch[jj] = 0;
+        shear = &allshear[dnum_pairgran*jj];
+        shear[0] = 0.0;
+        shear[1] = 0.0;
+        shear[2] = 0.0;
+
       } else {
         r = sqrt(rsq);
         rinv = 1.0/r;
