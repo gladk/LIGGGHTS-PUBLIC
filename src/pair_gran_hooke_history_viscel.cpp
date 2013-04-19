@@ -44,6 +44,7 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
+#include "comm.h"
 
 using namespace LAMMPS_NS;
 
@@ -478,7 +479,41 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
   firstneigh = list->firstneigh;
   firsttouch = listgranhistory->firstneigh;
   firstshear = listgranhistory->firstdouble;
+  
+  //FSTAT**********************************************
+  int iproc;																		//proc number
+  double fstattmp,time;																//fstattime, time
+  long int timestep;					//timestep
+  timestep = update->ntimestep;
+  std::ofstream fstatOut;
+  
+  if (not (timestep % fstat)) {
+    //processoir id
+    iproc = comm->me;
+    //timestep
+    time = dt*timestep;
+    
+    //generating outputfile
+    std::string filename;
+    std::ostringstream oss;
+    oss << "post/fstat_" << timestep <<".txt";
+    filename += oss.str();
+    fstatOut.open(filename.c_str(), std::ios::out);
+    //header only in proc0 file/////////////
+    if (iproc == 0)
+    {
+      
 
+      fstatOut << "ITEM: TIMESTEP " << std::endl;
+      fstatOut << timestep << std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
+    }
+  }
+  
+  //***************************************************
+  
   // loop over neighbors of my atoms
 
   for (ii = 0; ii < inum; ii++) {
@@ -502,6 +537,8 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       rsq = delx*delx + dely*dely + delz*delz;
       radj = radius[j];
       radsum = radi + radj;
+      
+      Eigen::Vector3f fCap = Eigen::Vector3f::Zero();
 
       if (rsq >= radsum*radsum) {
 
@@ -698,6 +735,9 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
         if(cpl && addflag) cpl->add_pair(i,j,fx,fy,fz,tor1,tor2,tor3,shear);
 
         if (evflag) ev_tally_xyz(i,j,nlocal,0,0.0,0.0,fx,fy,fz,delx,dely,delz);
+        if (not (timestep % fstat)) {
+          fstatOut << time << " " << f[i][0] << std::endl;
+        }
       }
     }
   }
