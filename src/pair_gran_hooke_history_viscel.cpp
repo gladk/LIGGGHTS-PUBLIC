@@ -41,7 +41,6 @@
 #include <iostream>
 #include <fstream>
 #include "vector_liggghts.h"
-#include <Eigen/Core>
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
@@ -261,7 +260,7 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
 }
 /* ---------------------------------------------------------------------- */
 
-inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
+Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
   if (touch>0 and capillarFlag) {
     //r is the distance between the sphere's centeres
     double ri = atom->radius[ip];
@@ -328,7 +327,7 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
           }  else if (not(Theta >= 0.0 and (Theta < M_PI/2.0))) {
             error->warning(FLERR,"The Theta is in illegal region!");
           }
-          return true;
+          return Eigen::Vector3f::Zero();
         }
       }
       else if (capillarType == Willett) {
@@ -407,31 +406,29 @@ inline bool PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &r
         fC = 2.0 * M_PI* R * Gamma * cos(Theta)/(1 + 1.05*sPl + 2.5 *sPl * sPl);         // Herminghaus, equation (7)
       }
       
+      Eigen::Vector3f fCV = -fC*normV;
       
-      if (fC != 0.0) {
-        Eigen::Vector3f fCV = -fC*normV;
-        if(computeflag)
-        {
-          f[ip][0] += fCV(0);
-          f[ip][1] += fCV(1);
-          f[ip][2] += fCV(2);
-        };
-        
-        if (jp < atom->nlocal && computeflag) {
-          f[jp][0] -= fCV(0);
-          f[jp][1] -= fCV(1);
-          f[jp][2] -= fCV(2);
-        };
-      }
+      if(computeflag)
+      {
+        f[ip][0] += fCV(0);
+        f[ip][1] += fCV(1);
+        f[ip][2] += fCV(2);
+      };
       
-      return false;
+      if (jp < atom->nlocal && computeflag) {
+        f[jp][0] -= fCV(0);
+        f[jp][1] -= fCV(1);
+        f[jp][2] -= fCV(2);
+      };
+      
+      return fCV;
     } else {
       touch = 0;
-      return true;
+      return Eigen::Vector3f::Zero();
     }
   }
   
-  return true;
+  return Eigen::Vector3f::Zero();
 };
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
@@ -509,7 +506,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       if (rsq >= radsum*radsum) {
 
         // unset non-touching neighbors
-        if (touch[jj] and (breakContact(i, j, rsq, touch[jj], addflag))) {
+        if (touch[jj] and (breakContact(i, j, rsq, touch[jj], addflag))==Eigen::Vector3f::Zero()) {
           touch[jj] = 0;
           shear = &allshear[dnum_pairgran*jj];
           shear[0] = 0.0;

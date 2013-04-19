@@ -43,6 +43,7 @@ PairStyle(gran/hooke/history/viscel,PairGranHookeHistoryViscEl)
 #define LMP_PAIR_GRAN_HOOKE_HISTORY_VISCEL_H
 
 #include "pair_gran_hooke_history.h"
+#include <Eigen/Core>
 
 namespace LAMMPS_NS {
 
@@ -62,7 +63,7 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   virtual void allocate_properties(int);
   virtual void deriveContactModelParams(int &, int &,double &, double &, double &,double &, double &, double &, double &, double &, double &);
   
-  virtual bool breakContact(int &, int &, double &, int &, int &);
+  Eigen::Vector3f breakContact(int &, int &, double &, int &, int &);
 
   //stiffness and damp parameters
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
