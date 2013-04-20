@@ -402,26 +402,23 @@ Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
           eprint = {http://www.tandfonline.com/doi/pdf/10.1080/00018730500167855}
           }
          */
-         
         
         fC = 2.0 * M_PI* R * Gamma * cos(Theta)/(1 + 1.05*sPl + 2.5 *sPl * sPl);         // Herminghaus, equation (7)
       }
       
       Eigen::Vector3f fCV = -fC*normV;
-      
-      if(computeflag)
-      {
-        f[ip][0] += fCV(0);
-        f[ip][1] += fCV(1);
-        f[ip][2] += fCV(2);
-      };
-      
-      if (jp < atom->nlocal && computeflag) {
-        f[jp][0] -= fCV(0);
-        f[jp][1] -= fCV(1);
-        f[jp][2] -= fCV(2);
-      };
-      
+        if(computeflag)
+        {
+            f[ip][0] += fCV(0);
+            f[ip][1] += fCV(1);
+            f[ip][2] += fCV(2);
+        }
+
+        if (jp < atom->nlocal && computeflag) {
+          f[jp][0] -= fCV(0);
+          f[jp][1] -= fCV(1);
+          f[jp][2] -= fCV(2);
+        } 
       return fCV;
     } else {
       touch = 0;
@@ -538,12 +535,13 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       radj = radius[j];
       radsum = radi + radj;
       
+      Eigen::Vector3f fApply = Eigen::Vector3f::Zero();
       Eigen::Vector3f fCap = Eigen::Vector3f::Zero();
 
       if (rsq >= radsum*radsum) {
-
+        fCap=breakContact(i, j, rsq, touch[jj], addflag);
         // unset non-touching neighbors
-        if (touch[jj] and (breakContact(i, j, rsq, touch[jj], addflag))==Eigen::Vector3f::Zero()) {
+        if (touch[jj] and (fCap==Eigen::Vector3f::Zero())) {
           touch[jj] = 0;
           shear = &allshear[dnum_pairgran*jj];
           shear[0] = 0.0;
@@ -713,6 +711,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
             }
         }
 
+        fApply = Eigen::Vector3f(fx, fy, fz);
         if(computeflag)
         {
             f[i][0] += fx;
@@ -735,9 +734,14 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
         if(cpl && addflag) cpl->add_pair(i,j,fx,fy,fz,tor1,tor2,tor3,shear);
 
         if (evflag) ev_tally_xyz(i,j,nlocal,0,0.0,0.0,fx,fy,fz,delx,dely,delz);
-        if (not (timestep % fstat)) {
-          fstatOut << x[i][0] << " " << x[i][1] << " " << x[i][2] << " "  << x[j][0] << " " << x[j][1] << " " << x[j][2] << " " << atom->tag[i] << " " << atom->tag[j] << " 0 " << f[i][0]<< " " << f[i][1] << " " << f[i][2] << std::endl;
+      }
+      if (not (timestep % fstat) and 
+          (fApply!=Eigen::Vector3f::Zero() or 
+           fCap!=Eigen::Vector3f::Zero())) {
+        if (fApply==Eigen::Vector3f::Zero()) {
+          fApply = fCap;
         }
+        fstatOut << x[i][0] << " " << x[i][1] << " " << x[i][2] << " "  << x[j][0] << " " << x[j][1] << " " << x[j][2] << " " << atom->tag[i] << " " << atom->tag[j] << " 0 " << fApply(0)<< " " << fApply(1) << " " << fApply(2) << std::endl;
       }
     }
   }
