@@ -56,35 +56,6 @@ PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3f P1, Eigen::Vect
   _Val = Val;
 }
 /* ---------------------------------------------------------------------- */
-void PairGranHookeHistoryViscEl::DataFstatRow::add(PairGranHookeHistoryViscEl::DataFstat data){
-  dataRow.push_back(data);
-}
-
-/* ---------------------------------------------------------------------- */
-void PairGranHookeHistoryViscEl::DataFstatRow::add(PairGranHookeHistoryViscEl::DataFstatRow data, int nproc, long int timestep){
-  for (int i=0; i<data.size(); i++) {
-    dataRow.push_back(data.getD(i));
-  }
-    _ncalls++;
-    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-    std::cerr<<dataRow.size()<<" "<<timestep <<std::endl;
-    /*
-    std::cerr<<nproc<<" "<<timestep<<std::endl;
-    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-    */
-    if (_ncalls==nproc) {
-      _ncalls = 0;
-    }
-}
-
-/* ---------------------------------------------------------------------- */
-int PairGranHookeHistoryViscEl::DataFstatRow::size(){
-   return  dataRow.size();
-}
-
-/* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
 PairGranHookeHistoryViscEl::PairGranHookeHistoryViscEl(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 {
