@@ -49,7 +49,66 @@
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
+PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3f P1, Eigen::Vector3f P2, int Id1, int Id2, Eigen::Vector3f Val){
+  _P1 = P1;
+  _P2 = P2;
+  _Id1 = Id1;
+  _Id2 = Id2;
+  _Val = Val;
+}
+/* ---------------------------------------------------------------------- */
+void PairGranHookeHistoryViscEl::DataFstatRow::add(PairGranHookeHistoryViscEl::DataFstat data){
+  dataRow.push_back(data);
+}
 
+/* ---------------------------------------------------------------------- */
+void PairGranHookeHistoryViscEl::DataFstatRow::add(PairGranHookeHistoryViscEl::DataFstatRow data, int nproc, long int timestep){
+  for (int i=0; i<data.size(); i++) {
+    dataRow.push_back(data.getD(i));
+  }
+    _ncalls++;
+    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+    std::cerr<<dataRow.size()<<" "<<timestep <<std::endl;
+    /*
+    std::cerr<<nproc<<" "<<timestep<<std::endl;
+    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+    std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
+    */
+    if (_ncalls==nproc) {
+      _ncalls = 0;
+      std::ofstream fstatOut;
+  
+      std::string filename;
+      std::ostringstream oss;
+      oss << "post/fstat_" << timestep <<".txt";
+      filename += oss.str();
+      fstatOut.open(filename.c_str(), std::ios::out);
+
+      fstatOut << "ITEM: TIMESTEP " << std::endl;
+      fstatOut << timestep << std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
+      for (long int i=0; i<dataRow.size(); i++){
+        fstatOut << 
+          dataRow[i]._P1(0)  << " " << dataRow[i]._P1(1)  << " " << dataRow[i]._P1(2)  << " "  << 
+          dataRow[i]._P2(0)  << " " << dataRow[i]._P2(1)  << " " << dataRow[i]._P2(2)  << " "  << 
+          dataRow[i]._Id1  << " " << dataRow[i]._Id2  << " 0 " <<
+          dataRow[i]._Val(0)  << " " << dataRow[i]._Val(1)  << " " << dataRow[i]._Val(2)  << " "  << std::endl;
+      }
+      dataRow.clear();
+      fstatOut.close();
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+int PairGranHookeHistoryViscEl::DataFstatRow::size(){
+   return  dataRow.size();
+}
+
+/* ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
 PairGranHookeHistoryViscEl::PairGranHookeHistoryViscEl(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 {
     k_n = k_t = gamma_n = gamma_t = GammaCapillar = ThetaCapillar = VBCapillar = NULL;
@@ -482,36 +541,11 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
   double fstattmp,time;																//fstattime, time
   long int timestep;					//timestep
   timestep = update->ntimestep;
-  std::ofstream fstatOut;
-  
-  if (not (timestep % fstat)) {
-    //processoir id
-    iproc = comm->me;
-    //timestep
-    time = dt*timestep;
-    
-    //generating outputfile
-    std::string filename;
-    std::ostringstream oss;
-    oss << "post/fstat_" << timestep <<".txt";
-    filename += oss.str();
-    fstatOut.open(filename.c_str(), std::ios::out);
-    //header only in proc0 file/////////////
-    if (iproc == 0)
-    {
-      
-
-      fstatOut << "ITEM: TIMESTEP " << std::endl;
-      fstatOut << timestep << std::endl;
-      fstatOut << "# "<< std::endl;
-      fstatOut << "# "<< std::endl;
-      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
-    }
-  }
-  
   //***************************************************
   
   // loop over neighbors of my atoms
+
+  PairGranHookeHistoryViscEl::DataFstatRow FstatRow;
 
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
@@ -741,9 +775,19 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
         if (fApply==Eigen::Vector3f::Zero()) {
           fApply = fCap;
         }
-        fstatOut << x[i][0] << " " << x[i][1] << " " << x[i][2] << " "  << x[j][0] << " " << x[j][1] << " " << x[j][2] << " " << atom->tag[i] << " " << atom->tag[j] << " 0 " << fApply(0)<< " " << fApply(1) << " " << fApply(2) << std::endl;
+        PairGranHookeHistoryViscEl::DataFstat FstatTMP(
+            Eigen::Vector3f(x[i][0],x[i][1],x[i][2]), 
+            Eigen::Vector3f(x[j][0],x[j][1],x[j][2]), 
+            atom->tag[i], atom->tag[j], 
+            fApply);
+        FstatRow.add(FstatTMP);
       }
     }
   }
-  fstatOut.close();
+  if (not (timestep % fstat)) {
+    std::cerr<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"<<std::endl;
+    std::cerr<<FstatRow.size()<<"   "<<update->ntimestep<<std::endl;
+    std::cerr<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"<<std::endl;
+    FstatToWrite.add(FstatRow,comm->nprocs, update->ntimestep);
+  }
 }

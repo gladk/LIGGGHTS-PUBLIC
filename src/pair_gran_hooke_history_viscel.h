@@ -44,6 +44,7 @@ PairStyle(gran/hooke/history/viscel,PairGranHookeHistoryViscEl)
 
 #include "pair_gran_hooke_history.h"
 #include <Eigen/Core>
+#include <vector>
 
 namespace LAMMPS_NS {
 
@@ -81,9 +82,32 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   virtual void compute_force(int eflag, int vflag, int addflag);
   
   int damp_massflag;
+  long int _ncalls;
+
+  class DataFstat {
+    public:
+      Eigen::Vector3f _P1, _P2, _Val;
+      int _Id1, _Id2;
+      DataFstat(Eigen::Vector3f P1, Eigen::Vector3f P2, int Id1, int Id2, Eigen::Vector3f Val);
+  };
+
+  class DataFstatRow {
+    private:
+      std::vector<PairGranHookeHistoryViscEl::DataFstat> dataRow;
+      int _ncalls;
+    public:
+      DataFstatRow() {_ncalls=0;};
+      void add(PairGranHookeHistoryViscEl::DataFstat);
+      void add(PairGranHookeHistoryViscEl::DataFstatRow, int nproc, long int timestep);
+      void write();
+      int size();
+      PairGranHookeHistoryViscEl::DataFstat getD(int d) {return dataRow[d];};
+  };
+  DataFstatRow FstatToWrite;
 };
 
 }
+
 
 #endif
 #endif
