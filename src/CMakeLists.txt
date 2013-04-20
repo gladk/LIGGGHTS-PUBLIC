@@ -24,6 +24,7 @@ FILE(GLOB to_remove main.cpp)
 LIST(REMOVE_ITEM SRC_FILES ${to_remove})
 
 ADD_LIBRARY(libliggghts SHARED ${SRC_FILES})
+TARGET_LINK_LIBRARIES(libliggghts ${Boost_LIBRARIES})
 SET_TARGET_PROPERTIES(libliggghts PROPERTIES 
   OUTPUT_NAME "liggghts${SUFFIX}"
   VERSION ${VERSION}

@@ -45,6 +45,10 @@ PairStyle(gran/hooke/history/viscel,PairGranHookeHistoryViscEl)
 #include "pair_gran_hooke_history.h"
 #include <Eigen/Core>
 #include <vector>
+#include <boost/mpi/environment.hpp>
+#include <boost/mpi/communicator.hpp>
+#include <boost/mpi/collectives.hpp>
+
 
 namespace LAMMPS_NS {
 
@@ -85,16 +89,36 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   long int _ncalls;
 
   class DataFstat {
+    private:
+      friend class boost::serialization::access;
+      template<class Archive>
+      void serialize(Archive & ar, const unsigned int version)
+          {
+            ar & _P1;
+            ar & _P2;
+            ar & _Val;
+            ar & _Id1;
+            ar & _Id2;
+          }
+
     public:
       Eigen::Vector3f _P1, _P2, _Val;
+      int show() {return _P1[0];};
       int _Id1, _Id2;
       DataFstat(Eigen::Vector3f P1, Eigen::Vector3f P2, int Id1, int Id2, Eigen::Vector3f Val);
+      DataFstat() {};
   };
 
   class DataFstatRow {
     private:
+      friend class boost::serialization::access;
       std::vector<PairGranHookeHistoryViscEl::DataFstat> dataRow;
       int _ncalls;
+      template<class Archive>
+        void serialize(Archive & ar, const unsigned int version)
+          {
+            ar & dataRow;
+          }
     public:
       DataFstatRow() {_ncalls=0;};
       void add(PairGranHookeHistoryViscEl::DataFstat);
@@ -108,6 +132,21 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
 
 }
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+namespace boost {
+  namespace serialization {
+
+    template<class Archive>
+      void serialize(Archive & ar, Eigen::Vector3f & g, const unsigned int version)
+      {
+            ar & g[0];
+            ar & g[1];
+            ar & g[2];
+      }
+
+  } // namespace serialization
+} // namespace boost
 
 #endif
 #endif

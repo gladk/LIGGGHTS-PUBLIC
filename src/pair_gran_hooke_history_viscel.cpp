@@ -44,7 +44,6 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
-#include "comm.h"
 
 using namespace LAMMPS_NS;
 
@@ -77,28 +76,6 @@ void PairGranHookeHistoryViscEl::DataFstatRow::add(PairGranHookeHistoryViscEl::D
     */
     if (_ncalls==nproc) {
       _ncalls = 0;
-      std::ofstream fstatOut;
-  
-      std::string filename;
-      std::ostringstream oss;
-      oss << "post/fstat_" << timestep <<".txt";
-      filename += oss.str();
-      fstatOut.open(filename.c_str(), std::ios::out);
-
-      fstatOut << "ITEM: TIMESTEP " << std::endl;
-      fstatOut << timestep << std::endl;
-      fstatOut << "# "<< std::endl;
-      fstatOut << "# "<< std::endl;
-      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
-      for (long int i=0; i<dataRow.size(); i++){
-        fstatOut << 
-          dataRow[i]._P1(0)  << " " << dataRow[i]._P1(1)  << " " << dataRow[i]._P1(2)  << " "  << 
-          dataRow[i]._P2(0)  << " " << dataRow[i]._P2(1)  << " " << dataRow[i]._P2(2)  << " "  << 
-          dataRow[i]._Id1  << " " << dataRow[i]._Id2  << " 0 " <<
-          dataRow[i]._Val(0)  << " " << dataRow[i]._Val(1)  << " " << dataRow[i]._Val(2)  << " "  << std::endl;
-      }
-      dataRow.clear();
-      fstatOut.close();
     }
 }
 
@@ -536,6 +513,12 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
   firsttouch = listgranhistory->firstneigh;
   firstshear = listgranhistory->firstdouble;
   
+
+  boost::mpi::environment env;
+  boost::mpi::communicator world;
+
+
+
   //FSTAT**********************************************
   int iproc;																		//proc number
   double fstattmp,time;																//fstattime, time
@@ -545,7 +528,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
   
   // loop over neighbors of my atoms
 
-  PairGranHookeHistoryViscEl::DataFstatRow FstatRow;
+  std::vector<PairGranHookeHistoryViscEl::DataFstat>  FstatVector;
 
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
@@ -780,14 +763,45 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
             Eigen::Vector3f(x[j][0],x[j][1],x[j][2]), 
             atom->tag[i], atom->tag[j], 
             fApply);
-        FstatRow.add(FstatTMP);
+        FstatVector.push_back(FstatTMP);
       }
     }
   }
-  if (not (timestep % fstat)) {
-    std::cerr<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"<<std::endl;
-    std::cerr<<FstatRow.size()<<"   "<<update->ntimestep<<std::endl;
-    std::cerr<<"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"<<std::endl;
-    FstatToWrite.add(FstatRow,comm->nprocs, update->ntimestep);
-  }
+    
+  if (not (timestep % fstat) and 
+      world.rank() == 0) {
+      std::vector< std::vector <PairGranHookeHistoryViscEl::DataFstat > > allF;
+      boost::mpi::gather(world, FstatVector, allF, 0);
+      
+      std::ofstream fstatOut;
+  
+      std::string filename;
+      std::ostringstream oss;
+      oss << "post/fstat_" << timestep <<".txt";
+      filename += oss.str();
+      fstatOut.open(filename.c_str(), std::ios::out);
+
+      fstatOut << "ITEM: TIMESTEP " << std::endl;
+      fstatOut << timestep << std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
+      for (int proc = 0; proc < world.size(); ++proc)
+        if (allF[proc].size()>0){
+          std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+          for (long int i=0; i<allF[proc].size(); i++){
+          PairGranHookeHistoryViscEl::DataFstat FstatTMP = allF[proc][i];
+            fstatOut << 
+              FstatTMP._P1(0)  << " " << FstatTMP._P1(1)  << " " << FstatTMP._P1(2)  << " "  << 
+              FstatTMP._P2(0)  << " " << FstatTMP._P2(1)  << " " << FstatTMP._P2(2)  << " "  << 
+              FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
+              FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << std::endl;
+          }
+          fstatOut.close();
+      
+        }
+      } else if (not (timestep % fstat)) {
+        boost::mpi::gather(world, FstatVector, 0);
+      }
+
 }

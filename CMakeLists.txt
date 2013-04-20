@@ -22,6 +22,9 @@ IF (NOT CMAKE_CXX_FLAGS)
 ENDIF (NOT CMAKE_CXX_FLAGS)
 
 #=======================================
+FIND_PACKAGE(Boost  COMPONENTS mpi serialization REQUIRED)
+INCLUDE_DIRECTORIES (${Boost_INCLUDE_DIRS})
+#=======================================
 
 INCLUDE(FindVTK)
 INCLUDE(GNUInstallDirs)
