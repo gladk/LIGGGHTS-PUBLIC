@@ -56,7 +56,6 @@ PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3f P1, Eigen::Vect
   _Val = Val;
 }
 /* ---------------------------------------------------------------------- */
-/* ---------------------------------------------------------------------- */
 PairGranHookeHistoryViscEl::PairGranHookeHistoryViscEl(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 {
     k_n = k_t = gamma_n = gamma_t = GammaCapillar = ThetaCapillar = VBCapillar = NULL;
@@ -745,6 +744,10 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       boost::mpi::gather(world, FstatVector, allF, 0);
       
       std::ofstream fstatOut;
+      long int numbForces = 0;
+      for (int proc = 0; proc < world.size(); ++proc) {
+        numbForces += allF[proc].size();
+      }
   
       std::string filename;
       std::ostringstream oss;
@@ -755,11 +758,9 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       fstatOut << "ITEM: TIMESTEP " << std::endl;
       fstatOut << timestep << std::endl;
       fstatOut << "# "<< std::endl;
-      fstatOut << "# "<< std::endl;
+      fstatOut << numbForces << std::endl;
       fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
-      for (int proc = 0; proc < world.size(); ++proc)
-        if (allF[proc].size()>0){
-          std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+      for (int proc = 0; proc < world.size(); ++proc) {
           for (long int i=0; i<allF[proc].size(); i++){
           PairGranHookeHistoryViscEl::DataFstat FstatTMP = allF[proc][i];
             fstatOut << 
@@ -768,11 +769,9 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
               FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
               FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << std::endl;
           }
-          fstatOut.close();
-      
         }
+        fstatOut.close();
       } else if (not (timestep % fstat)) {
         boost::mpi::gather(world, FstatVector, 0);
       }
-
 }

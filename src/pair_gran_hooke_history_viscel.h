@@ -48,6 +48,8 @@ PairStyle(gran/hooke/history/viscel,PairGranHookeHistoryViscEl)
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/collectives.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 
 namespace LAMMPS_NS {
@@ -112,8 +114,6 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
 
 }
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 namespace boost {
   namespace serialization {
 
