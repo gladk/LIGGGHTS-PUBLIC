@@ -736,10 +736,10 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
 
         if (evflag) ev_tally_xyz(i,j,nlocal,0,0.0,0.0,fx,fy,fz,delx,dely,delz);
         if (not (timestep % fstat)) {
-          fstatOut << time << " " << f[i][0] << std::endl;
+          fstatOut << x[i][0] << " " << x[i][1] << " " << x[i][2] << " "  << x[j][0] << " " << x[j][1] << " " << x[j][2] << " " << atom->tag[i] << " " << atom->tag[j] << " 0 " << f[i][0]<< " " << f[i][1] << " " << f[i][2] << std::endl;
         }
       }
     }
   }
-
+  fstatOut.close();
 }
