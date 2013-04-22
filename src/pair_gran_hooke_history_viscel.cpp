@@ -729,12 +729,14 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
           fApply = fCap;
         }
       
+      if (j < nlocal) {
         PairGranHookeHistoryViscEl::DataFstat FstatTMP(
             Eigen::Vector3d(x[i][0],x[i][1],x[i][2]), 
             Eigen::Vector3d(x[j][0],x[j][1],x[j][2]), 
             atom->tag[i], atom->tag[j], 
             fApply);        
         FstatVector.push_back(FstatTMP);
+        }
       }
     }
   }
