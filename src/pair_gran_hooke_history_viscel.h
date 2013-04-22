@@ -70,7 +70,7 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   virtual void allocate_properties(int);
   virtual void deriveContactModelParams(int &, int &,double &, double &, double &,double &, double &, double &, double &, double &, double &);
   
-  Eigen::Vector3f breakContact(int &, int &, double &, int &, int &);
+  Eigen::Vector3d breakContact(int &, int &, double &, int &, int &);
 
   //stiffness and damp parameters
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
@@ -104,9 +104,9 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
           }
 
     public:
-      Eigen::Vector3f _P1, _P2, _Val;
+      Eigen::Vector3d _P1, _P2, _Val;
       int _Id1, _Id2;
-      DataFstat(Eigen::Vector3f P1, Eigen::Vector3f P2, int Id1, int Id2, Eigen::Vector3f Val);
+      DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val);
       DataFstat() {};
   };
 
@@ -118,7 +118,7 @@ namespace boost {
   namespace serialization {
 
     template<class Archive>
-      void serialize(Archive & ar, Eigen::Vector3f & g, const unsigned int version)
+      void serialize(Archive & ar, Eigen::Vector3d & g, const unsigned int version)
       {
             ar & g[0];
             ar & g[1];

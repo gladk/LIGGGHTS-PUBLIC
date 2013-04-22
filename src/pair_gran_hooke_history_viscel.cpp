@@ -48,7 +48,7 @@
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
-PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3f P1, Eigen::Vector3f P2, int Id1, int Id2, Eigen::Vector3f Val){
+PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val){
   _P1 = P1;
   _P2 = P2;
   _Id1 = Id1;
@@ -267,7 +267,7 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
 }
 /* ---------------------------------------------------------------------- */
 
-Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
+Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
   if (touch>0 and capillarFlag) {
     //r is the distance between the sphere's centeres
     double ri = atom->radius[ip];
@@ -295,7 +295,7 @@ Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
       double c0 = 0.96;
       double c1 = 1.1;
       
-      Eigen::Vector3f normV = Eigen::Vector3f(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
+      Eigen::Vector3d normV = Eigen::Vector3d(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();
       
       
@@ -334,7 +334,7 @@ Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
           }  else if (not(Theta >= 0.0 and (Theta < M_PI/2.0))) {
             error->warning(FLERR,"The Theta is in illegal region!");
           }
-          return Eigen::Vector3f::Zero();
+          return Eigen::Vector3d::Zero();
         }
       }
       else if (capillarType == Willett) {
@@ -412,7 +412,7 @@ Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
         fC = 2.0 * M_PI* R * Gamma * cos(Theta)/(1 + 1.05*sPl + 2.5 *sPl * sPl);         // Herminghaus, equation (7)
       }
       
-      Eigen::Vector3f fCV = -fC*normV;
+      Eigen::Vector3d fCV = -fC*normV;
         if(computeflag)
         {
             f[ip][0] += fCV(0);
@@ -428,11 +428,11 @@ Eigen::Vector3f PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
       return fCV;
     } else {
       touch = 0;
-      return Eigen::Vector3f::Zero();
+      return Eigen::Vector3d::Zero();
     }
   }
   
-  return Eigen::Vector3f::Zero();
+  return Eigen::Vector3d::Zero();
 };
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
@@ -522,13 +522,13 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       radj = radius[j];
       radsum = radi + radj;
       
-      Eigen::Vector3f fApply = Eigen::Vector3f::Zero();
-      Eigen::Vector3f fCap = Eigen::Vector3f::Zero();
+      Eigen::Vector3d fApply = Eigen::Vector3d::Zero();
+      Eigen::Vector3d fCap = Eigen::Vector3d::Zero();
 
       if (rsq >= radsum*radsum) {
         fCap=breakContact(i, j, rsq, touch[jj], addflag);
         // unset non-touching neighbors
-        if (touch[jj] and (fCap==Eigen::Vector3f::Zero())) {
+        if (touch[jj] and (fCap==Eigen::Vector3d::Zero())) {
           touch[jj] = 0;
           shear = &allshear[dnum_pairgran*jj];
           shear[0] = 0.0;
@@ -698,7 +698,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
             }
         }
 
-        fApply = Eigen::Vector3f(fx, fy, fz);
+        fApply = Eigen::Vector3d(fx, fy, fz);
         if(computeflag)
         {
             f[i][0] += fx;
@@ -723,15 +723,15 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
         if (evflag) ev_tally_xyz(i,j,nlocal,0,0.0,0.0,fx,fy,fz,delx,dely,delz);
       }
       if (not (timestep % fstat) and 
-          (fApply!=Eigen::Vector3f::Zero() or 
-           fCap!=Eigen::Vector3f::Zero())) {
-        if (fApply==Eigen::Vector3f::Zero()) {
+          (fApply!=Eigen::Vector3d::Zero() or 
+           fCap!=Eigen::Vector3d::Zero())) {
+        if (fApply==Eigen::Vector3d::Zero()) {
           fApply = fCap;
         }
       
         PairGranHookeHistoryViscEl::DataFstat FstatTMP(
-            Eigen::Vector3f(x[i][0],x[i][1],x[i][2]), 
-            Eigen::Vector3f(x[j][0],x[j][1],x[j][2]), 
+            Eigen::Vector3d(x[i][0],x[i][1],x[i][2]), 
+            Eigen::Vector3d(x[j][0],x[j][1],x[j][2]), 
             atom->tag[i], atom->tag[j], 
             fApply);        
         FstatVector.push_back(FstatTMP);
