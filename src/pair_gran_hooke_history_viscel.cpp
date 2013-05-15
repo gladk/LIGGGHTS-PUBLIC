@@ -82,6 +82,7 @@ void PairGranHookeHistoryViscEl::settings(int narg, char **arg)
 {
     PairGranHookeHistory::settings(narg,arg);
     capillarFlag  = false;
+    explicitFlag  = false;
     capillarType  = Weigert;
     
     bool hasargs = true;
@@ -97,6 +98,18 @@ void PairGranHookeHistoryViscEl::settings(int narg, char **arg)
                 capillarFlag = true;
             else
                 error->all(FLERR,"Illegal pair_style gran command, expecting 'on' or 'off' after keyword 'capilarity'");
+            iarg_++;
+            hasargs = true;
+        }
+        else if (strcmp(arg[iarg_],"explicitly") == 0) {
+            if (narg < iarg_+2) error->all(FLERR,"Set parameters explicitly: not enough arguments for 'explicit flag'");
+            iarg_++;
+            if(strcmp(arg[iarg_],"off") == 0)
+                explicitFlag = false;
+            else if(strcmp(arg[iarg_],"on") == 0)
+                explicitFlag = true;
+            else
+                error->all(FLERR,"Illegal pair_style gran command, expecting 'on' or 'off' after keyword 'explicitly'");
             iarg_++;
             hasargs = true;
         }
@@ -149,6 +162,13 @@ void PairGranHookeHistoryViscEl::init_granular()
     VB1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("VB","property/global","peratomtypepair",max_type,max_type,force->pair_style));
   }
   
+  if (explicitFlag)  {
+    knSet=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Kn","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+    gnSet=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Gn","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+    ksSet=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Ks","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+    gsSet=static_cast<FixPropertyGlobal*>(modify->find_fix_property("Gs","property/global","peratomtypepair",max_type,max_type,force->pair_style));
+  }
+  
   double mpi2 = M_PI*M_PI;
   fstat = fstat1->compute_scalar();
   
@@ -179,11 +199,20 @@ void PairGranHookeHistoryViscEl::init_granular()
          * Used formula (22)
          */
           
-          k_n[i][j] = (mpi2 + pow(log(e_n1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
-          k_t[i][j] = 2.0/7.0*(mpi2 + pow(log(e_t1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
-          gamma_n[i][j] = -2.0*log(e_n1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
-          gamma_t[i][j] = -2.0/7.0*log(e_t1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
           
+          if (explicitFlag){
+            error->message(FLERR,"Explicitly set contact parameters.");
+            k_n[i][j] = knSet->compute_array(i-1,j-1);
+            k_t[i][j] = ksSet->compute_array(i-1,j-1);
+            gamma_n[i][j] = gnSet->compute_array(i-1,j-1);
+            gamma_t[i][j] = gsSet->compute_array(i-1,j-1);
+          } else {
+            k_n[i][j] = (mpi2 + pow(log(e_n1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
+            k_t[i][j] = 2.0/7.0*(mpi2 + pow(log(e_t1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
+            gamma_n[i][j] = -2.0*log(e_n1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
+            gamma_t[i][j] = -2.0/7.0*log(e_t1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
+          }
+            
           coeffFrict[i][j] = coeffFrict1->compute_array(i-1,j-1);
           
           
@@ -250,12 +279,20 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
     int itype = atom->type[ip];
     int jtype = atom->type[jp];
           
-    kn = meff*k_n[itype][jtype];
-    kt = meff*k_t[itype][jtype];
-
-    gamman = meff*gamma_n[itype][jtype];
-    gammat = meff*gamma_t[itype][jtype];
-
+    if (explicitFlag){
+      kn = k_n[itype][jtype];
+      kt = k_t[itype][jtype];
+  
+      gamman = gamma_n[itype][jtype];
+      gammat = gamma_t[itype][jtype];
+    } else {
+      kn = meff*k_n[itype][jtype];
+      kt = meff*k_t[itype][jtype];
+  
+      gamman = meff*gamma_n[itype][jtype];
+      gammat = meff*gamma_t[itype][jtype];
+    }
+    
     xmu=coeffFrict[itype][jtype];
     if (dampflag == 0) gammat = 0.0;
 
