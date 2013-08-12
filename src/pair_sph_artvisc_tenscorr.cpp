@@ -56,7 +56,7 @@ PairSphArtviscTenscorr::PairSphArtviscTenscorr(LAMMPS *lmp) : PairSph(lmp)
 {
   respa_enable = 0;
   single_enable = 0;
-  calcMode_ = 1;
+  pairStyle_ = 1;
 
   csmean = NULL;
   wDeltaPTypeinv = NULL;
@@ -132,6 +132,7 @@ void PairSphArtviscTenscorr::settings(int narg, char **arg)
       if (iarg+4 > narg) error->all(FLERR, "Illegal pair_style sph command");
       artVisc_flag = 1;
       alpha = force->numeric(arg[iarg+1]);
+      viscosity_ = alpha;
       beta = force->numeric(arg[iarg+2]);
       eta = force->numeric(arg[iarg+3]);
       iarg += 4;
@@ -312,7 +313,7 @@ double PairSphArtviscTenscorr::artificialViscosity(int ip, int jp, int itype, in
 
   double muAB, rhoMeanInv,dotDelVDelR;
 
-  //double **v = atom->v;
+  //double **v = atom->vest;
 
   dotDelVDelR = ( (v[ip][0]-v[jp][0])*delx + (v[ip][1]-v[jp][1])*dely + (v[ip][2]-v[jp][2])*delz );
 
@@ -381,7 +382,7 @@ void PairSphArtviscTenscorr::compute_eval(int eflag, int vflag)
   double radi,radj,rcom;
 
   double **x = atom->x;
-  double **v = atom->v;
+  double **v = atom->vest;
   double *p = atom->p;
   double *rho = atom->rho;
   double **f = atom->f;
