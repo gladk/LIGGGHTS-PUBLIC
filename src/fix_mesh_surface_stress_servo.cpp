@@ -517,8 +517,7 @@ void FixMeshSurfaceStressServo::limit_vel()
   vmag = abs(*control_output_);
 
   // saturation of the velocity
-  int totNumContacts = fix_mesh_neighlist_->getTotalNumContacts();
-  if (mode_flag_ && totNumContacts > 0) {
+  if (mode_flag_ ) {
     maxOutput = ctrl_output_min_;
   } else {
     maxOutput = ctrl_output_max_;
