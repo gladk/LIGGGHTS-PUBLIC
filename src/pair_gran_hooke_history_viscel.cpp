@@ -207,10 +207,17 @@ void PairGranHookeHistoryViscEl::init_granular()
             gamma_n[i][j] = gnSet->compute_array(i-1,j-1);
             gamma_t[i][j] = gsSet->compute_array(i-1,j-1);
           } else {
-            k_n[i][j] = (mpi2 + pow(log(e_n1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
-            k_t[i][j] = 2.0/7.0*(mpi2 + pow(log(e_t1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
-            gamma_n[i][j] = -2.0*log(e_n1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
-            gamma_t[i][j] = -2.0/7.0*log(e_t1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
+            if (tc1->compute_array(i-1,j-1) > 0.0) {
+              k_n[i][j] = (mpi2 + pow(log(e_n1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
+              k_t[i][j] = 2.0/7.0*(mpi2 + pow(log(e_t1->compute_array(i-1,j-1)),2))/(pow(tc1->compute_array(i-1,j-1), 2));
+              gamma_n[i][j] = -2.0*log(e_n1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
+              gamma_t[i][j] = -2.0/7.0*log(e_t1->compute_array(i-1,j-1))/tc1->compute_array(i-1,j-1);
+            } else {
+              k_n[i][j] = 0.0;
+              k_t[i][j] = 0.0;
+              gamma_n[i][j] = 0.0;
+              gamma_t[i][j] = 0.0;
+            }
           }
             
           coeffFrict[i][j] = coeffFrict1->compute_array(i-1,j-1);
