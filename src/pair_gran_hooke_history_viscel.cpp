@@ -785,8 +785,10 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
     }
   }
     
-  if (not (timestep % fstat) and 
-      world.rank() == 0) {
+  if ((not (timestep % fstat)) and 
+      (world.rank() == 0) and
+      (timestep != 0)) {
+  
       std::vector< std::vector <PairGranHookeHistoryViscEl::DataFstat > > allF;
       boost::mpi::gather(world, FstatVector, allF, 0);
       
