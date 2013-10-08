@@ -118,10 +118,10 @@ void PairGranHookeHistoryViscEl::settings(int narg, char **arg)
             iarg_++;
             if(strcmp(arg[iarg_],"weigert") == 0)
                 capillarType  = Weigert;
-            else if(strcmp(arg[iarg_],"willett") == 0)
-                capillarType  = Willett;
-            else if(strcmp(arg[iarg_],"herminghaus") == 0)
-                capillarType  = Herminghaus;
+            else if(strcmp(arg[iarg_],"willettA") == 0)
+                capillarType  = WillettA;
+            else if(strcmp(arg[iarg_],"willettN") == 0)
+                capillarType  = WillettN;
             else
                 error->all(FLERR,"Illegal pair_style gran command, expecting 'weigert', 'willett' or 'herminghaus' after keyword 'capillarType'");
             iarg_++;
@@ -380,7 +380,7 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
           fC = M_PI/4.0*pow((2.0*R),2.0)*pow(sin(beta),2.0)*Pk +
              Gamma*M_PI*2.0*R*sin(beta)*sin(beta+Theta);                                // [Weigert1999], equation (21)
       }
-      else if (capillarType == Willett) {
+      else if (capillarType == WillettN) {
         double Th1 = Theta;
         double Th2 = Th1*Th1;
         double sPl = s/sqrt(Vb/R)/2.0;
@@ -424,14 +424,12 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
                   (0.03345 + 0.04543*Th1 - 0.09056*Th2) * log(VbS) +
                   (0.0018574 + 0.004456*Th1 - 0.006257*Th2) *log(VbS)*log(VbS);
   
-        
-        
         double lnFS = f1 - f2*exp(f3*log(sPl) + f4*log(sPl)*log(sPl));
         double FS = exp(lnFS);
         
         fC = FS * 2.0 * M_PI* R * Gamma;
       }
-      else if (capillarType == Herminghaus) {
+      else if (capillarType == WillettA) {
         double sPl = s/sqrt(Vb/R);
         
         /* Capillar model from Herminghaus (Willett)

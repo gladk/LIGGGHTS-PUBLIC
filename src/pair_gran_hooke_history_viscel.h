@@ -83,7 +83,7 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
   
   bool capillarFlag;
   bool explicitFlag;
-  enum capillar_types_all { Weigert, Willett, Herminghaus };
+  enum capillar_types_all { Weigert, WillettN, WillettA };
   capillar_types_all capillarType;
   int fstat;
   
