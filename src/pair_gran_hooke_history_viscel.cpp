@@ -334,14 +334,8 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
     double sCrit = (1+0.5*Theta)*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0))*R;  // [Willett2000], equation (15), use the full-length e.g 2*Sc
     
     if (s<sCrit) {
-      
-      double c0 = 0.96;
-      double c1 = 1.1;
-      
       Eigen::Vector3d normV = Eigen::Vector3d(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();
-      
-      
       double fC = 0.0;
       
       if (capillarType == Weigert) {
@@ -430,7 +424,7 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
         fC = FS * 2.0 * M_PI* R * Gamma;
       }
       else if (capillarType == WillettA) {
-        double sPl = s/sqrt(Vb/R);
+        double sPl = (s/2.0)/sqrt(Vb/R);                                            // [Willett2000], equation (sentence after (11)), s - half-separation, so s*2.0
         
         /* Capillar model from Herminghaus (Willett)
          * http://www.tandfonline.com/doi/abs/10.1080/00018730500167855
@@ -449,8 +443,8 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
           eprint = {http://www.tandfonline.com/doi/pdf/10.1080/00018730500167855}
           }
          */
-        
-        fC = 2.0 * M_PI* R * Gamma * cos(Theta)/(1 + 1.05*sPl + 2.5 *sPl * sPl);         // Herminghaus, equation (7)
+        const double f_star = cos(Theta)/(1 + 2.1*sPl + 10.0 * pow(sPl, 2.0));  // [Willett2000], equation (12)
+        fC = f_star * (2*M_PI*R*Gamma);                                         // [Willett2000], equation (13), against F
       }
       
       Eigen::Vector3d fCV = -fC*normV;
