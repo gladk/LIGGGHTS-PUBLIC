@@ -362,23 +362,23 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
         year = {1999},
         }
         * 
-       */
-        double sinBeta = pow(Vb/((c0*R*R*R*(1+3*s/R)*(1+c1*sin(Theta)))), 1.0/4.0);
-        if ((sinBeta>0.0 and sinBeta<1.0) and (Theta > 0.0 and (Theta <M_PI/2.0))) {
-          double beta = asin(sinBeta);
-          double r1 = (R*(1-cos(beta)) + s/2.0)/(cos(beta+Theta));
-          double r2 = R*sin(beta) + r1*(sin(beta+Theta)-1);
-          double Pc = Gamma*(1/r1 + 1/r2);
-          fC = 2*M_PI*Gamma*R*sin(beta)*sin(beta+Theta) + M_PI*R*R*Pc*sin(beta)*sin(beta);
-        } else {
-          touch = 0;
-          if (not(sinBeta>0.0 and sinBeta<1.0)){
-            error->warning(FLERR,"The Beta is in illegal region!");
-          }  else if (not(Theta >= 0.0 and (Theta < M_PI/2.0))) {
-            error->warning(FLERR,"The Theta is in illegal region!");
-          }
-          return Eigen::Vector3d::Zero();
-        }
+       */ 
+          
+          double Ca = (1.0 + 6.0*s/(R*2.0));    // [Weigert1999], equation (16)
+          double Ct = (1.0 + 1.1*sin(Theta));   // [Weigert1999], equation (17)
+          
+          double beta = asin(pow(Vb/(0.12*Ca*Ct*pow(2.0*R, 3.0)), 1.0/4.0));                     // [Weigert1999], equation (15), against Vb
+          
+          double r1 = (2.0*R*(1-cos(beta)) + s)/(2.0*cos(beta+Theta));                           // [Weigert1999], equation (5)
+          double r2 = R*sin(beta) + r1*(sin(beta+Theta)-1);                                      // [Weigert1999], equation (6)
+          
+          double Pk = Gamma*(1/r1 - 1/r2);                                                        /* [Weigert1999], equation (22),
+                                                                                                   * see also a sentence over the equation
+                                                                                                   * "R1 was taken as positive and R2 was taken as negative"
+                                                                                                   */ 
+                                                                                                   
+          fC = M_PI/4.0*pow((2.0*R),2.0)*pow(sin(beta),2.0)*Pk +
+             Gamma*M_PI*2.0*R*sin(beta)*sin(beta+Theta);                                // [Weigert1999], equation (21)
       }
       else if (capillarType == Willett) {
         double Th1 = Theta;
