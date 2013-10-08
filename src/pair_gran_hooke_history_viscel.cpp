@@ -330,9 +330,8 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
     double VbS = Vb/(R*R*R);
     double Gamma = GammaCapillar[itype][jtype];
     
-    double sCrit = (1+0.5*Theta)*pow(VBCapillar[itype][jtype],1/3.0);
-    
-    
+    const double Vstar = VBCapillar[itype][jtype]/(R*R*R);
+    double sCrit = (1+0.5*Theta)*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0))*R;  // [Willett2000], equation (15), use the full-length e.g 2*Sc
     
     if (s<sCrit) {
       
