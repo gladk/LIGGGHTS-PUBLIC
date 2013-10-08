@@ -122,8 +122,10 @@ void PairGranHookeHistoryViscEl::settings(int narg, char **arg)
                 capillarType  = WillettA;
             else if(strcmp(arg[iarg_],"willettN") == 0)
                 capillarType  = WillettN;
+            else if(strcmp(arg[iarg_],"rabinovich") == 0)
+                capillarType  = Rabinovich;
             else
-                error->all(FLERR,"Illegal pair_style gran command, expecting 'weigert', 'willett' or 'herminghaus' after keyword 'capillarType'");
+                error->all(FLERR,"Illegal pair_style gran command, expecting 'weigert', 'willettA', 'willettR',  or 'rabinovich' after keyword 'capillarType'");
             iarg_++;
             hasargs = true;
         } else
@@ -445,6 +447,43 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
          */
         const double f_star = cos(Theta)/(1 + 2.1*sPl + 10.0 * pow(sPl, 2.0));  // [Willett2000], equation (12)
         fC = f_star * (2*M_PI*R*Gamma);                                         // [Willett2000], equation (13), against F
+      } else if (capillarType == Rabinovich) {
+        /* Capillar model from Rabinovich [Rabinov2005]
+         * @article{Rabinov2005,
+         *   author = "RABINOVICH Yakov I. and ESAYANUR Madhavan S. and MOUDGIL Brij M.",
+         *   institution = "Particle Engineering Research Center, University of Florida, USA; Department of Materials Science and Engineering, University of Florida, USA",
+         *   title = "Capillary forces between two spheres with a fixed volume liquid bridge : Theory and experiment",
+         *   journal = "Langmuir",
+         *   year = "2005",
+         *   volume = "21",
+         *   number = "24",
+         *   pages = "10992--10997",
+         *   editor = "American Chemical Society",
+         *   issn = "0743-7463",
+         *   note = "eng",
+         *   keywords = "Atomic force microscopy; Equation; Plane surface; Rupture; Thermodynamics; Methodology; Gas pressure; Calculation; Solid; Interaction energy; Geometry; Plate; Separation; Prediction; Powder; Vapor; Capillary condensation; Theory; Liquid; Force",
+         *   url = "http://www.refdoc.fr/Detailnotice?idarticle=7435486"
+         *  }
+         */
+        
+        const double H = s;
+        const double V = Vb;
+        
+        double alpha = 0.0;
+        double dsp = 0.0;
+        if (H!=0.0) {
+          alpha = sqrt(H/R*(-1+ sqrt(1 + 2.0*V/(M_PI*R*H*H))));                 // [Rabinov2005], equation (A3)
+          
+          dsp = H/2.0*(-1.0 + sqrt(1.0 + 2.0*V/(M_PI*R*H*H)));                  // [Rabinov2005], equation (20)
+        
+          fC = -(2*M_PI*R*Gamma*cos(Theta))/(1+(H/(2*dsp))) - 
+                2*M_PI*R*Gamma*sin(alpha)*sin(Theta + alpha);                   // [Rabinov2005], equation (19)
+        } else {
+          fC = -(2*M_PI*R*Gamma*cos(Theta)) - 
+                 2*M_PI*R*Gamma*sin(alpha)*sin(Theta + alpha);                  // [Rabinov2005], equation (19)
+        }
+        
+        fC *=-1;
       }
       
       Eigen::Vector3d fCV = -fC*normV;
