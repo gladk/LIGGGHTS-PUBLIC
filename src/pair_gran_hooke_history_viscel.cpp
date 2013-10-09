@@ -850,7 +850,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
           }
         }
         fstatOut.close();
-      } else if (not (timestep % fstat)) {
+      } else if (not (timestep % fstat) and (timestep != 0)) {
         boost::mpi::gather(world, FstatVector, 0);
       }
 }
