@@ -881,7 +881,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       fstatOut << timestep << std::endl;
       fstatOut << "# "<< std::endl;
       fstatOut << numbForces << std::endl;
-      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] " << std::endl;
+      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] VolWater DistCurr DistCrit" << std::endl;
       for (int proc = 0; proc < world.size(); ++proc) {
           for (long int i=0; i<allF[proc].size(); i++){
           PairGranHookeHistoryViscEl::DataFstat FstatTMP = allF[proc][i];
@@ -889,7 +889,8 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
               FstatTMP._P1(0)  << " " << FstatTMP._P1(1)  << " " << FstatTMP._P1(2)  << " "  << 
               FstatTMP._P2(0)  << " " << FstatTMP._P2(1)  << " " << FstatTMP._P2(2)  << " "  << 
               FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
-              FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << std::endl;
+              FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << 
+              FstatTMP._VolWater  << " " << FstatTMP._DistCurr  << " "<< FstatTMP._DistCrit  << std::endl;
           }
         }
         fstatOut.close();
