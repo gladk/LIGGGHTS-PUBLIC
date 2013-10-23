@@ -69,8 +69,6 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
  protected:
   virtual void allocate_properties(int);
   virtual void deriveContactModelParams(int &, int &,double &, double &, double &,double &, double &, double &, double &, double &, double &);
-  
-  Eigen::Vector3d breakContact(int &, int &, double &, int &, int &);
 
   //stiffness and damp parameters
   class FixPropertyGlobal *tc1,*e_n1,*e_t1;
@@ -103,15 +101,20 @@ class PairGranHookeHistoryViscEl : public PairGranHookeHistory {
             ar & _Val;
             ar & _Id1;
             ar & _Id2;
+            ar & _VolWater;
+            ar & _DistCurr;
+            ar & _DistCrit;
           }
 
     public:
       Eigen::Vector3d _P1, _P2, _Val;
       int _Id1, _Id2;
-      DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val);
-      DataFstat() {};
+      double _VolWater, _DistCurr, _DistCrit;
+      DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val, double VolWater, double DistCurr, double DistCrit);
+      DataFstat();
   };
-
+  
+  DataFstat breakContact(int &, int &, double &, int &, int &);
 };
 
 }

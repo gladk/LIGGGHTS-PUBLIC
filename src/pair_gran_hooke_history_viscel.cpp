@@ -48,12 +48,25 @@
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
-PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val){
+PairGranHookeHistoryViscEl::DataFstat::DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val, double VolWater, double DistCurr, double DistCrit){
   _P1 = P1;
   _P2 = P2;
   _Id1 = Id1;
   _Id2 = Id2;
   _Val = Val;
+  _VolWater = VolWater;
+  _DistCurr = DistCurr;
+  _DistCrit = DistCrit;
+}
+PairGranHookeHistoryViscEl::DataFstat::DataFstat(){
+  _P1 = Eigen::Vector3d::Zero();
+  _P2 = Eigen::Vector3d::Zero();
+  _Id1 = 0.;
+  _Id2 = 0.;
+  _Val = Eigen::Vector3d::Zero();
+  _VolWater = 0;
+  _DistCurr = 0;
+  _DistCrit = 0;
 }
 /* ---------------------------------------------------------------------- */
 PairGranHookeHistoryViscEl::PairGranHookeHistoryViscEl(LAMMPS *lmp) : PairGranHookeHistory(lmp)
@@ -313,28 +326,28 @@ inline void PairGranHookeHistoryViscEl::deriveContactModelParams(int &ip, int &j
 }
 /* ---------------------------------------------------------------------- */
 
-Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
+PairGranHookeHistoryViscEl::DataFstat PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, double &rsq, int &touch, int &addflag) {
+  //r is the distance between the sphere's centeres
+  double ri = atom->radius[ip];
+  double rj = atom->radius[jp];
+  int itype = atom->type[ip];
+  int jtype = atom->type[jp];
+  double r = sqrt(rsq);
+  
+  double **f = atom->f;
+  double **x = atom->x;
+  
+  double R = 2 * ri * rj / (ri + rj);
+  double s = (r-ri-rj);
+  double Theta = ThetaCapillar[itype][jtype];
+  double Vb = VBCapillar[itype][jtype];
+  double VbS = Vb/(R*R*R);
+  double Gamma = GammaCapillar[itype][jtype];
+  
   if (touch>0 and capillarFlag) {
-    //r is the distance between the sphere's centeres
-    double ri = atom->radius[ip];
-    double rj = atom->radius[jp];
-    int itype = atom->type[ip];
-    int jtype = atom->type[jp];
-    double r = sqrt(rsq);
-    
-    double **f = atom->f;
-    double **x = atom->x;
-    
-    double R = 2 * ri * rj / (ri + rj);
-    double s = (r-ri-rj);
-    double Theta = ThetaCapillar[itype][jtype];
-    double Vb = VBCapillar[itype][jtype];
-    double VbS = Vb/(R*R*R);
-    double Gamma = GammaCapillar[itype][jtype];
-    
     const double Vstar = VBCapillar[itype][jtype]/(R*R*R);
     double sCrit = (1+0.5*Theta)*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0))*R;  // [Willett2000], equation (15), use the full-length e.g 2*Sc
-    
+      
     if (s<sCrit) {
       Eigen::Vector3d normV = Eigen::Vector3d(x[ip][0] - x[jp][0], x[ip][1] - x[jp][1], x[ip][2] - x[jp][2]);
       normV.normalize();
@@ -499,14 +512,42 @@ Eigen::Vector3d PairGranHookeHistoryViscEl::breakContact(int &ip, int &jp, doubl
           f[jp][1] -= fCV(1);
           f[jp][2] -= fCV(2);
         } 
-      return fCV;
+      PairGranHookeHistoryViscEl::DataFstat FstatTMP(
+        Eigen::Vector3d(x[ip][0],x[ip][1],x[ip][2]), 
+        Eigen::Vector3d(x[jp][0],x[jp][1],x[jp][2]), 
+        atom->tag[ip], atom->tag[jp], 
+        fCV,
+        Vb,
+        s,
+        sCrit
+      );
+      return FstatTMP;
     } else {
       touch = 0;
-      return Eigen::Vector3d::Zero();
+      PairGranHookeHistoryViscEl::DataFstat FstatTMP(
+        Eigen::Vector3d(x[ip][0],x[ip][1],x[ip][2]), 
+        Eigen::Vector3d(x[jp][0],x[jp][1],x[jp][2]), 
+        atom->tag[ip], atom->tag[jp], 
+        Eigen::Vector3d::Zero(),
+        Vb,
+        s,
+        sCrit
+      );
+      return FstatTMP;
     }
+  } else {
+     PairGranHookeHistoryViscEl::DataFstat FstatTMP(
+      Eigen::Vector3d(x[ip][0],x[ip][1],x[ip][2]), 
+      Eigen::Vector3d(x[jp][0],x[jp][1],x[jp][2]), 
+      atom->tag[ip], atom->tag[jp], 
+      Eigen::Vector3d::Zero(),
+      -1,
+      -1,
+      -1
+    );
+    return FstatTMP;
   }
   
-  return Eigen::Vector3d::Zero();
 };
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
@@ -598,9 +639,19 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       
       Eigen::Vector3d fApply = Eigen::Vector3d::Zero();
       Eigen::Vector3d fCap = Eigen::Vector3d::Zero();
-
+      PairGranHookeHistoryViscEl::DataFstat FstatTMP(
+        Eigen::Vector3d(x[i][0],x[i][1],x[i][2]), 
+        Eigen::Vector3d(x[j][0],x[j][1],x[j][2]), 
+        atom->tag[i], atom->tag[j], 
+        Eigen::Vector3d::Zero(),
+        -1,
+        -1,
+        -1
+      );
+      
       if (rsq >= radsum*radsum) {
-        fCap=breakContact(i, j, rsq, touch[jj], addflag);
+        FstatTMP = breakContact(i, j, rsq, touch[jj], addflag);
+        fCap=FstatTMP._Val;
         // unset non-touching neighbors
         if (touch[jj] and (fCap==Eigen::Vector3d::Zero())) {
           touch[jj] = 0;
@@ -791,25 +842,17 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
           torque[j][1] -= crj*tor2 - r_torque[1];
           torque[j][2] -= crj*tor3 - r_torque[2];
         }
-
+        FstatTMP._Val=fApply;
+        
         if(cpl && addflag) cpl->add_pair(i,j,fx,fy,fz,tor1,tor2,tor3,shear);
 
         if (evflag) ev_tally_xyz(i,j,nlocal,0,0.0,0.0,fx,fy,fz,delx,dely,delz);
       }
       if (not (timestep % fstat) and 
-          (fApply!=Eigen::Vector3d::Zero() or 
-           fCap!=Eigen::Vector3d::Zero())) {
-        if (fApply==Eigen::Vector3d::Zero()) {
-          fApply = fCap;
-        }
-      
+          (FstatTMP._Val!=Eigen::Vector3d::Zero())) {
+        
         if (not((j >= nlocal and atom->tag[i] <= atom->tag[j]))) {
-        PairGranHookeHistoryViscEl::DataFstat FstatTMP(
-            Eigen::Vector3d(x[i][0],x[i][1],x[i][2]), 
-            Eigen::Vector3d(x[j][0],x[j][1],x[j][2]), 
-            atom->tag[i], atom->tag[j], 
-            fApply);        
-        FstatVector.push_back(FstatTMP);
+          FstatVector.push_back(FstatTMP);
         }
       }
     }
@@ -827,7 +870,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       for (int proc = 0; proc < world.size(); ++proc) {
         numbForces += allF[proc].size();
       }
-  
+      
       std::string filename;
       std::ostringstream oss;
       oss << "post/fstat_" << timestep <<".txt";
@@ -842,7 +885,7 @@ void PairGranHookeHistoryViscEl::compute_force(int eflag, int vflag,int addflag)
       for (int proc = 0; proc < world.size(); ++proc) {
           for (long int i=0; i<allF[proc].size(); i++){
           PairGranHookeHistoryViscEl::DataFstat FstatTMP = allF[proc][i];
-            fstatOut << 
+            fstatOut << std::setprecision(15) <<
               FstatTMP._P1(0)  << " " << FstatTMP._P1(1)  << " " << FstatTMP._P1(2)  << " "  << 
               FstatTMP._P2(0)  << " " << FstatTMP._P2(1)  << " " << FstatTMP._P2(2)  << " "  << 
               FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
