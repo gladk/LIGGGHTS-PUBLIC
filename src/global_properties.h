@@ -76,6 +76,10 @@ namespace MODEL_PARAMS
   MatrixProperty* createCoeffMaxElasticStiffness(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createCoeffAdhesionStiffness(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createCoeffPlasticityDepth(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  
+  MatrixProperty* createEn(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  MatrixProperty* createEt(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  MatrixProperty* createTc(PropertyRegistry & registry, const char * caller, bool sanity_checks);
 }
 
 #endif /* GLOBAL_PROPERTIES_H_ */

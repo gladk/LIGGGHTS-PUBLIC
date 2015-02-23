@@ -57,6 +57,7 @@ namespace MODEL_PARAMS
   static const char * COEFFICIENT_MAX_ELASTIC_STIFFNESS = "coefficientMaxElasticStiffness";
   static const char * COEFFICIENT_ADHESION_STIFFNESS = "coefficientAdhesionStiffness";
   static const char * COEFFICIENT_PLASTICITY_DEPTH = "coefficientPlasticityDepth";
+  
 
   /* -----------------------------------------------------------------------
    * Utility functions
@@ -582,4 +583,25 @@ namespace MODEL_PARAMS
   }
 
   /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createEn(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "e_n", caller);
+  }
+
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createEt(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "e_t", caller);
+  }
+
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createTc(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "t_c", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
 }
