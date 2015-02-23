@@ -120,33 +120,15 @@ namespace ContactModels
         gamman = -2.0 /t_c[itype][jtype] * std::log(e_n[itype][jtype])*meff;
         gammat = -4.0/7.0 /t_c[itype][jtype] * std::log(e_t[itype][jtype])*meff;
       }
-      
-      std::cerr<<"!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
-      std::cerr<<"en: "<<e_n[itype][jtype]<<std::endl;
-      std::cerr<<"et: "<<e_t[itype][jtype]<<std::endl;
-      std::cerr<<"tc: "<<t_c[itype][jtype]<<std::endl;
-      std::cerr<<"kn: "<<kn<<std::endl;
-      std::cerr<<"kt: "<<kt<<std::endl;
-      std::cerr<<"gamman: "<<gamman<<std::endl;
-      std::cerr<<"gammat: "<<gammat<<std::endl;
-      std::cerr<<"meff: "<<meff<<std::endl;
-      std::cerr<<"Overlap: "<<cdata.radsum-cdata.r<<std::endl;
-      
+      //
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
       kt /= force->nktv2p;
 
       const double Fn_damping = -gamman*cdata.vn;    
       const double Fn_contact = kn*(cdata.radsum-cdata.r);
-      double Fn                       = Fn_damping + Fn_contact;
+      double Fn               = Fn_damping + Fn_contact;
 
-
-      std::cerr<<"Fn_damping: "<<Fn_damping<<std::endl;
-      std::cerr<<"Fn_contact: "<<Fn_contact<<std::endl;
-
-
-      std::cerr<<"Fn: "<<Fn<<std::endl<<std::endl<<std::endl;
-      
       //limit force to avoid the artefact of negative repulsion force
       if((Fn<0.0))
       {
