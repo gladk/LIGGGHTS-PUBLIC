@@ -53,6 +53,7 @@ namespace ContactModels
       e_n(NULL),
       e_t(NULL),
       t_c(NULL),
+      coeffFrict(NULL),
       explicitFlag(false)
     {
       
@@ -88,6 +89,9 @@ namespace ContactModels
         registry.registerProperty("t_c", &MODEL_PARAMS::createTc);
         registry.connect("t_c", t_c,"model hooke/viscel");
       }
+      
+      registry.registerProperty("coeffFrict", &MODEL_PARAMS::createCoeffFrict);
+      registry.connect("coeffFrict", coeffFrict,"tangential_model history");
 
       // error checks on coarsegraining
       if(force->cg_active())
@@ -105,7 +109,9 @@ namespace ContactModels
     {
       const int itype = cdata.itype;
       const int jtype = cdata.jtype;
-      const double meff=cdata.meff;
+      const double meff = cdata.meff;
+      const double xmu  = coeffFrict[cdata.itype][cdata.jtype];
+      const double vrel = sqrt(cdata.vtr1*cdata.vtr1 + cdata.vtr2*cdata.vtr2 + cdata.vtr3*cdata.vtr3);
 
       double kn, kt, gamman, gammat;
       
@@ -134,28 +140,62 @@ namespace ContactModels
       {
           Fn = 0.0;
       }
-
+      
       cdata.Fn = Fn;
 
       cdata.kn = kn;
       cdata.kt = kt;
       cdata.gamman = gamman;
       cdata.gammat = gammat;
+      
+      // force normalization
+      const double Ft_friction = xmu * fabs(Fn);
+      const double Ft_damping = gammat*vrel;     
+      double Ft = 0.0;
 
+      if (vrel != 0.0) {
+        Ft = min(Ft_friction, Ft_damping) / vrel;
+      }
+
+      // tangential force due to tangential velocity damping
+      const double Ft1 = -Ft*cdata.vtr1;
+      const double Ft2 = -Ft*cdata.vtr2;
+      const double Ft3 = -Ft*cdata.vtr3;
+
+      // forces & torques
+      const double enx = cdata.en[0];
+      const double eny = cdata.en[1];
+      const double enz = cdata.en[2];
+      
+      const double tor1 = (eny*Ft3 - enz*Ft2);
+      const double tor2 = (enz*Ft1 - enx*Ft3);
+      const double tor3 = (enx*Ft2 - eny*Ft1);
+      
       // apply normal force
       if(cdata.is_wall) {
+        const double area_ratio = cdata.area_ratio;
         const double Fn_ = Fn * cdata.area_ratio;
-        i_forces.delta_F[0] = Fn_ * cdata.en[0];
-        i_forces.delta_F[1] = Fn_ * cdata.en[1];
-        i_forces.delta_F[2] = Fn_ * cdata.en[2];
+        i_forces.delta_F[0] = Fn_ * cdata.en[0] + Ft1 * area_ratio;
+        i_forces.delta_F[1] = Fn_ * cdata.en[1] + Ft2 * area_ratio;
+        i_forces.delta_F[2] = Fn_ * cdata.en[2] + Ft3 * area_ratio;
+        
+        i_forces.delta_torque[0] = -cdata.cri * tor1 * area_ratio;
+        i_forces.delta_torque[1] = -cdata.cri * tor2 * area_ratio;
+        i_forces.delta_torque[2] = -cdata.cri * tor3 * area_ratio;
       } else {
-        i_forces.delta_F[0] = cdata.Fn * cdata.en[0];
-        i_forces.delta_F[1] = cdata.Fn * cdata.en[1];
-        i_forces.delta_F[2] = cdata.Fn * cdata.en[2];
+        i_forces.delta_F[0] = cdata.Fn * cdata.en[0] + Ft1;
+        i_forces.delta_F[1] = cdata.Fn * cdata.en[1] + Ft2;
+        i_forces.delta_F[2] = cdata.Fn * cdata.en[2] + Ft3;
+        i_forces.delta_torque[0] = -cdata.cri * tor1;
+        i_forces.delta_torque[1] = -cdata.cri * tor2;
+        i_forces.delta_torque[2] = -cdata.cri * tor3;
 
-        j_forces.delta_F[0] = -i_forces.delta_F[0];
-        j_forces.delta_F[1] = -i_forces.delta_F[1];
-        j_forces.delta_F[2] = -i_forces.delta_F[2];
+        j_forces.delta_F[0] = -i_forces.delta_F[0] - Ft1;
+        j_forces.delta_F[1] = -i_forces.delta_F[1] - Ft2;
+        j_forces.delta_F[2] = -i_forces.delta_F[2] - Ft3;
+        j_forces.delta_torque[0] = -cdata.crj * tor1;
+        j_forces.delta_torque[1] = -cdata.crj * tor2;
+        j_forces.delta_torque[2] = -cdata.crj * tor3;
       }
     }
 
@@ -172,6 +212,7 @@ namespace ContactModels
     double ** e_n;
     double ** e_t;
     double ** t_c;
+    double ** coeffFrict;
     
     bool explicitFlag;
   };
