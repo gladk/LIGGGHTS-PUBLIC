@@ -626,4 +626,10 @@ namespace MODEL_PARAMS
   }
   /* ---------------------------------------------------------------------- */
 
+  MatrixProperty* createCapillaryModel(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "capillaryModel", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
 }

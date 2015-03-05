@@ -85,6 +85,14 @@ namespace MODEL_PARAMS
   MatrixProperty* createEt(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createTc(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   
+  MatrixProperty* createCapillaryModel(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  // 1 -- Willet analytical model   [Willett2000]
+  // 2 -- Willet numerical model    [Willett2000], equations in Attachment
+  // 3 -- Weigert                   [Weigert1999]
+  // 4 -- Rabinovich                [Rabinov2005]
+  // 5 -- Lambert                   [Lambert2008]
+  // 6 -- Soulie                    [Soulie2006]
+  
   MatrixProperty* createGamma(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createTheta(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createVb(PropertyRegistry & registry, const char * caller, bool sanity_checks);

@@ -35,6 +35,7 @@ NORMAL_MODEL(HOOKE_VISCEL,hooke/viscel,5)
 #include "force.h"
 #include "update.h"
 #include <cmath>
+#include <vector>
 #include <Eigen/Dense>
 
 namespace LIGGGHTS {
@@ -58,6 +59,7 @@ namespace ContactModels
       gamma(NULL),
       theta(NULL),
       vb(NULL),
+      capillaryModelLoad(NULL),
       critDist(-1),
       R(-1), vbCur(-1), gammaCur(-1), thetaCur(-1),
       explicitFlag(false),
@@ -72,7 +74,137 @@ namespace ContactModels
       settings.registerOnOff("explicitly", explicitFlag);
       settings.registerOnOff("capillary", capillarFlag);
     }
-
+    
+    static double Willett_analytic_f(const double & R, const double & Vb, const double & Gamma, const double & Theta, const double & s) {
+      /*
+      * Capillar model from Willet [Willett2000] (analytical solution), but
+      * used also in the work of Herminghaus [Herminghaus2005]
+      */
+      
+      const double sPl = (s/2.0)/sqrt(Vb/R); // [Willett2000], equation (sentence after (11)), s - half-separation, so s*2.0
+      const double f_star = cos(Theta)/(1 + 2.1*sPl + 10.0 * pow(sPl, 2.0)); // [Willett2000], equation (12)
+      const double fC = f_star * (2*M_PI*R*Gamma); // [Willett2000], equation (13), against F
+      return fC;
+    }
+    
+    static double Willett_numeric_f(const double & R, const double & Vb, const double & Gamma, const double & Theta, const double & s) {
+      const double VbS = Vb/(R*R*R);
+      const double Th1 = Theta;
+      const double Th2 = Theta;
+      
+      /*
+      * [Willett2000], equations in Attachment
+      */
+      const double f1 = (-0.44507 + 0.050832*Th1 - 1.1466*Th2) +
+        (-0.1119 - 0.000411*Th1 - 0.1490*Th2) * log(VbS) +
+        (-0.012101 - 0.0036456*Th1 - 0.01255*Th2) *log(VbS)*log(VbS) +
+        (-0.0005 - 0.0003505*Th1 - 0.00029076*Th2) *log(VbS)*log(VbS)*log(VbS);
+      const double f2 = (1.9222 - 0.57473*Th1 - 1.2918*Th2) +
+        (-0.0668 - 0.1201*Th1 - 0.22574*Th2) * log(VbS) +
+        (-0.0013375 - 0.0068988*Th1 - 0.01137*Th2) *log(VbS)*log(VbS);
+      const double f3 = (1.268 - 0.01396*Th1 - 0.23566*Th2) +
+        (0.198 + 0.092*Th1 - 0.06418*Th2) * log(VbS) +
+        (0.02232 + 0.02238*Th1 - 0.009853*Th2) *log(VbS)*log(VbS) +
+        (0.0008585 + 0.001318*Th1 - 0.00053*Th2) *log(VbS)*log(VbS)*log(VbS);
+      const double f4 = (-0.010703 + 0.073776*Th1 - 0.34742*Th2) +
+        (0.03345 + 0.04543*Th1 - 0.09056*Th2) * log(VbS) +
+        (0.0018574 + 0.004456*Th1 - 0.006257*Th2) *log(VbS)*log(VbS);
+      const double sPl = (s/2.0)/sqrt(Vb/R);
+      const double lnFS = f1 - f2*exp(f3*log(sPl) + f4*log(sPl)*log(sPl));
+      const double FS = exp(lnFS);
+      const double fC = FS * 2.0 * M_PI* R * Gamma;
+      return fC;
+    }
+    
+    static double Weigert_f(const double & R, const double & Vb, const double & Gamma, const double & Theta, const double & s) {
+      /*
+      * Capillar model from [Weigert1999]
+      */
+      
+      const double a = s;
+      const double Ca = (1.0 + 6.0*a/(R*2.0)); // [Weigert1999], equation (16)
+      const double Ct = (1.0 + 1.1*sin(Theta)); // [Weigert1999], equation (17)
+      
+      const double beta = asin(pow(Vb/(0.12*Ca*Ct*pow(2.0*R, 3.0)), 1.0/4.0)); // [Weigert1999], equation (15), against Vb
+      const double r1 = (2.0*R*(1-cos(beta)) + a)/(2.0*cos(beta+Theta)); // [Weigert1999], equation (5)
+      const double r2 = R*sin(beta) + r1*(sin(beta+Theta)-1); // [Weigert1999], equation (6)
+      const double Pk = Gamma*(1/r1 - 1/r2); // [Weigert1999], equation (22),
+      // see also a sentence over the equation
+      // "R1 was taken as positive and R2 was taken as negative"
+      // fC = M_PI*2.0*R*phys.gamma/(1+tan(0.5*beta)); // [Weigert1999], equation (23), [Fisher]
+      const double fC = M_PI/4.0*pow((2.0*R),2.0)*pow(sin(beta),2.0)*Pk + Gamma*M_PI*2.0*R*sin(beta)*sin(beta+Theta); // [Weigert1999], equation (21)
+      return fC; 
+    }
+    
+    
+    static double Rabinovich_f(const double & R, const double & Vb, const double & Gamma, const double & Theta, const double & s) {
+      /*
+      * Capillar model from Rabinovich [Rabinov2005]
+      *
+      * This formulation from Rabinovich has been later verified and corrected
+      * by Lambert [Lambert2008]. So we can calculate both formulations
+      *
+      */
+      const double H = s;
+      const double V = Vb;
+      double fC = 0.0;
+      double dsp = 0.0;
+      if (H!=0.0) {
+        dsp = H/2.0*(-1.0 + sqrt(1.0 + 2.0*V/(M_PI*R*H*H))); // [Rabinov2005], equation (20)
+        fC = -(2*M_PI*R*Gamma*cos(Theta))/(1+(H/(2*dsp))); // [Lambert2008], equation (65), taken from [Rabinov2005]
+      const double alpha = sqrt(H/R*(-1+ sqrt(1 + 2.0*V/(M_PI*R*H*H)))); // [Rabinov2005], equation (A3)
+        fC -= 2*M_PI*R*Gamma*sin(alpha)*sin(Theta + alpha); // [Rabinov2005], equation (19)
+      } else {
+        fC = -(2*M_PI*R*Gamma*cos(Theta));
+        const double alpha = 0.0;
+        fC -= 2*M_PI*R*Gamma*sin(alpha)*sin(Theta + alpha); // [Rabinov2005], equation (19)
+      }
+      fC *=-1;
+      return fC;
+    }
+    
+    static double Lambert_f(const double & R, const double & Vb, const double & Gamma, const double & Theta, const double & s) {
+      /*
+      * Capillar model from Rabinovich [Rabinov2005]
+      *
+      * This formulation from Rabinovich has been later verified and corrected
+      * by Lambert [Lambert2008]. So we can calculate both formulations
+      *
+      */
+      const double H = s;
+      const double V = Vb;
+      double fC = 0.0;
+      double dsp = 0.0;
+      if (H!=0.0) {
+        dsp = H/2.0*(-1.0 + sqrt(1.0 + 2.0*V/(M_PI*R*H*H))); // [Rabinov2005], equation (20)
+        fC = -(2*M_PI*R*Gamma*cos(Theta))/(1+(H/(2*dsp))); // [Lambert2008], equation (65), taken from [Rabinov2005]
+      } else {
+        fC = -(2*M_PI*R*Gamma*cos(Theta));
+      }
+      fC *=-1;
+      return fC;
+    }
+    
+    static double Soulie_f(const double & R, const double & Vb, const double & Gamma, const double & Theta, const double & s) {
+      /*
+      * Capillar model from Soulie [Soulie2006]
+      *
+      * !!! In this implementation the radiis of particles are taken equal
+      * to get the symmetric forces.
+      *
+      * Please, use this model only for testing purposes.
+      *
+      */
+      
+      const double D = s;
+      const double V = Vb;
+      const double a = -1.1*pow((V/(R*R*R)), -0.53);
+      const double b = (-0.148*log(V/(R*R*R)) - 0.96)*Theta*Theta -0.0082*log(V/(R*R*R)) + 0.48;
+      const double c = 0.0018*log(V/(R*R*R)) + 0.078;
+      const double fC = M_PI*Gamma*sqrt(R*R)*(c+exp(a*D/R+b));
+      return fC;  
+    }
+    
     void connectToProperties(PropertyRegistry & registry) {
       
       if (explicitFlag) {
@@ -108,6 +240,16 @@ namespace ContactModels
        
         registry.registerProperty("vb", &MODEL_PARAMS::createVb);
         registry.connect("vb", vb,"model hooke/viscel");
+        
+        registry.registerProperty("capillaryModel", &MODEL_PARAMS::createCapillaryModel);
+        registry.connect("capillaryModel", capillaryModelLoad,"model hooke/viscel");
+        
+        capModels.push_back(Willett_analytic_f);
+        capModels.push_back(Willett_numeric_f);
+        capModels.push_back(Weigert_f);
+        capModels.push_back(Rabinovich_f);
+        capModels.push_back(Lambert_f);
+        capModels.push_back(Soulie_f);
       }
       
       registry.registerProperty("coeffFrict", &MODEL_PARAMS::createCoeffFrict);
@@ -179,7 +321,7 @@ namespace ContactModels
       
       if (not(touchFlag) and capillarFlag) {
         touchFlag = true;
-        if (critDist < 1) {
+        if (critDist < 0) {
           R = 2*cdata.radi*cdata.radj/(cdata.radi + cdata.radj);
           vbCur = vb[itype][jtype];
           gammaCur = gamma[itype][jtype];
@@ -187,6 +329,7 @@ namespace ContactModels
           const double Vstar = vbCur/(R*R*R);
           const double Sstar = (1+0.5*thetaCur)*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0)); // [Willett2000], equation (15), use the full-length e.g 2*Sc
           critDist = Sstar*R;
+          curCapModel = capModels[capillaryModelLoad[itype][jtype]-1];
         }
       }
       
@@ -247,9 +390,8 @@ namespace ContactModels
           const double Vb = vbCur;
           const double Theta = thetaCur;
           
-          const double sPl = (s/2.0)/sqrt(Vb/R); // [Willett2000], equation (sentence after (11)), s - half-separation, so s*2.0
-          const double f_star = cos(Theta)/(1 + 2.1*sPl + 10.0 * pow(sPl, 2.0)); // [Willett2000], equation (12)
-          const double Fn = f_star * (2*M_PI*R*Gamma); 
+          const double Fn = curCapModel(R, Vb, Gamma, Theta, s); 
+          
           if(cdata.is_wall) {
             const double area_ratio = cdata.area_ratio;
             const double Fn_ = Fn * cdata.area_ratio;
@@ -282,6 +424,7 @@ namespace ContactModels
     double ** gamma;
     double ** theta;
     double ** vb;
+    double ** capillaryModelLoad;
     
     double ** e_n;
     double ** e_t;
@@ -298,8 +441,12 @@ namespace ContactModels
     double vbCur;
     double gammaCur;
     double thetaCur;
+    std::vector<double (*)(const double &, const double &, const double &, const double &, const double &)> capModels;
+    double (*curCapModel)(const double &, const double &, const double &, const double &, const double &);
   };
 }
 }
+
+
 #endif // NORMAL_MODEL_HOOKE_VISCEL_H_
 #endif
