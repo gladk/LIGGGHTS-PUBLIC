@@ -35,6 +35,7 @@ NORMAL_MODEL(HOOKE_VISCEL,hooke/viscel,5)
 #include "force.h"
 #include "update.h"
 #include <cmath>
+#include <Eigen/Dense>
 
 namespace LIGGGHTS {
 namespace ContactModels
@@ -54,7 +55,14 @@ namespace ContactModels
       e_t(NULL),
       t_c(NULL),
       coeffFrict(NULL),
-      explicitFlag(false)
+      gamma(NULL),
+      theta(NULL),
+      vb(NULL),
+      critDist(-1),
+      R(-1), vbCur(-1), gammaCur(-1), thetaCur(-1),
+      explicitFlag(false),
+      capillarFlag(false),
+      touchFlag(false)
     {
       
     }
@@ -62,6 +70,7 @@ namespace ContactModels
     void registerSettings(Settings & settings)
     {
       settings.registerOnOff("explicitly", explicitFlag);
+      settings.registerOnOff("capillary", capillarFlag);
     }
 
     void connectToProperties(PropertyRegistry & registry) {
@@ -88,6 +97,17 @@ namespace ContactModels
         
         registry.registerProperty("t_c", &MODEL_PARAMS::createTc);
         registry.connect("t_c", t_c,"model hooke/viscel");
+      }
+      
+      if (capillarFlag) {
+        registry.registerProperty("gamma", &MODEL_PARAMS::createGamma);
+        registry.connect("gamma", gamma,"model hooke/viscel");
+       
+        registry.registerProperty("theta", &MODEL_PARAMS::createTheta);
+        registry.connect("theta", theta,"model hooke/viscel");
+       
+        registry.registerProperty("vb", &MODEL_PARAMS::createVb);
+        registry.connect("vb", vb,"model hooke/viscel");
       }
       
       registry.registerProperty("coeffFrict", &MODEL_PARAMS::createCoeffFrict);
@@ -126,7 +146,7 @@ namespace ContactModels
         gamman = -2.0 /t_c[itype][jtype] * std::log(e_n[itype][jtype])*meff;
         gammat = -4.0/7.0 /t_c[itype][jtype] * std::log(e_t[itype][jtype])*meff;
       }
-      //
+      
       // convert Kn and Kt from pressure units to force/distance^2
       kn /= force->nktv2p;
       kt /= force->nktv2p;
@@ -156,7 +176,20 @@ namespace ContactModels
       if (vrel != 0.0) {
         Ft = min(Ft_friction, Ft_damping) / vrel;
       }
-
+      
+      if (not(touchFlag) and capillarFlag) {
+        touchFlag = true;
+        if (critDist < 1) {
+          R = 2*cdata.radi*cdata.radj/(cdata.radi + cdata.radj);
+          vbCur = vb[itype][jtype];
+          gammaCur = gamma[itype][jtype];
+          thetaCur = theta[itype][jtype];
+          const double Vstar = vbCur/(R*R*R);
+          const double Sstar = (1+0.5*thetaCur)*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0)); // [Willett2000], equation (15), use the full-length e.g 2*Sc
+          critDist = Sstar*R;
+        }
+      }
+      
       // tangential force due to tangential velocity damping
       const double Ft1 = -Ft*cdata.vtr1;
       const double Ft2 = -Ft*cdata.vtr2;
@@ -170,7 +203,7 @@ namespace ContactModels
       const double tor1 = (eny*Ft3 - enz*Ft2);
       const double tor2 = (enz*Ft1 - enx*Ft3);
       const double tor3 = (enx*Ft2 - eny*Ft1);
-      
+
       // apply normal force
       if(cdata.is_wall) {
         const double area_ratio = cdata.area_ratio;
@@ -199,7 +232,44 @@ namespace ContactModels
       }
     }
 
-    void noCollision(ContactData&, ForceData&, ForceData&){}
+    void noCollision(ContactData& cdata, ForceData& i_forces, ForceData& j_forces){
+      if (touchFlag and capillarFlag) {
+        cdata.has_force_update = true;
+        const Eigen::Vector3d dCur = Eigen::Vector3d(cdata.delta[0],cdata.delta[1],cdata.delta[2]);
+        const Eigen::Vector3d dCurN = dCur.normalized();
+        const double s = dCur.norm() - cdata.radsum;
+        if(critDist  > 0 and s < critDist) {
+          /*
+          * Capillar model from Willet [Willett2000] (analytical solution), but
+          * used also in the work of Herminghaus [Herminghaus2005]
+          */
+          const double Gamma = gammaCur;
+          const double Vb = vbCur;
+          const double Theta = thetaCur;
+          
+          const double sPl = (s/2.0)/sqrt(Vb/R); // [Willett2000], equation (sentence after (11)), s - half-separation, so s*2.0
+          const double f_star = cos(Theta)/(1 + 2.1*sPl + 10.0 * pow(sPl, 2.0)); // [Willett2000], equation (12)
+          const double Fn = f_star * (2*M_PI*R*Gamma); 
+          if(cdata.is_wall) {
+            const double area_ratio = cdata.area_ratio;
+            const double Fn_ = Fn * cdata.area_ratio;
+            i_forces.delta_F[0] = -Fn_ * dCurN[0];
+            i_forces.delta_F[1] = -Fn_ * dCurN[1];
+            i_forces.delta_F[2] = -Fn_ * dCurN[2];
+          } else {
+            i_forces.delta_F[0] = -Fn * dCurN[0];
+            i_forces.delta_F[1] = -Fn * dCurN[1];
+            i_forces.delta_F[2] = -Fn * dCurN[2];
+    
+            j_forces.delta_F[0] = -i_forces.delta_F[0];
+            j_forces.delta_F[1] = -i_forces.delta_F[1];
+            j_forces.delta_F[2] = -i_forces.delta_F[2];
+          }
+        } else {
+          touchFlag = false;
+        }
+      }
+    }
     void beginPass(CollisionData&, ForceData&, ForceData&){}
     void endPass(CollisionData&, ForceData&, ForceData&){}
 
@@ -209,12 +279,25 @@ namespace ContactModels
     double ** gamma_n;
     double ** gamma_t;
     
+    double ** gamma;
+    double ** theta;
+    double ** vb;
+    
     double ** e_n;
     double ** e_t;
     double ** t_c;
     double ** coeffFrict;
     
     bool explicitFlag;
+    bool capillarFlag;
+    
+    bool touchFlag;
+    
+    double critDist;
+    double R;
+    double vbCur;
+    double gammaCur;
+    double thetaCur;
   };
 }
 }

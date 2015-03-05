@@ -84,6 +84,12 @@ namespace MODEL_PARAMS
   MatrixProperty* createEn(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createEt(PropertyRegistry & registry, const char * caller, bool sanity_checks);
   MatrixProperty* createTc(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  
+  MatrixProperty* createGamma(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  MatrixProperty* createTheta(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  MatrixProperty* createVb(PropertyRegistry & registry, const char * caller, bool sanity_checks);
+  
+  
 }
 
 #endif /* GLOBAL_PROPERTIES_H_ */

@@ -608,4 +608,22 @@ namespace MODEL_PARAMS
   }
   /* ---------------------------------------------------------------------- */
 
+  MatrixProperty* createGamma(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "gamma", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createTheta(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "theta", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createVb(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "vb", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
 }
