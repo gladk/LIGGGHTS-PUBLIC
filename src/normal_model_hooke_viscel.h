@@ -61,12 +61,16 @@ namespace ContactModels
       capillarFlag(false)
     {
       history_offset = hsetup->add_history_value("firstTouch", "1");
-      history_offset = hsetup->add_history_value("touchFlag", "1");
-      history_offset = hsetup->add_history_value("firstTouchCap", "1");
-      history_offset = hsetup->add_history_value("critDist", "1");
-      history_offset = hsetup->add_history_value("R", "1");
-      history_offset = hsetup->add_history_value("vbCur", "1");
-      history_offset = hsetup->add_history_value("thetaCur", "1");
+      hsetup->add_history_value("touchFlag", "1");
+      hsetup->add_history_value("firstTouchCap", "1");
+      hsetup->add_history_value("critDist", "1");
+      hsetup->add_history_value("R", "1");
+      hsetup->add_history_value("vbCur", "1");
+      hsetup->add_history_value("thetaCur", "1");
+      hsetup->add_history_value("kn", "1");
+      hsetup->add_history_value("kt", "1");
+      hsetup->add_history_value("gamman", "1");
+      hsetup->add_history_value("gammat", "1");
     }
     
     void registerSettings(Settings & settings)
@@ -284,28 +288,40 @@ namespace ContactModels
       double * const vbCur = &history[5];
       double * const thetaCur = &history[6];
       double * const gammaCur = &history[7];
+      double * const kn = &history[8];
+      double * const kt = &history[9];
+      double * const gamman = &history[10];
+      double * const gammat = &history[11];
       
-      //std::cout<<"!!!!!!!!!!!!!!!  "<<&cdata.firstTouch<<"  "<<cdata.firstTouch<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
-      //std::cout<<"!!!!!!!!!!!!!!!  "<<history[0]<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;history[0]=1;
+      //std::cout<<"1a  "<<firstTouch<<"  "<<*firstTouch<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
       
-      if (not(*firstTouch)) {
-        std::cout<<"!!!!!!!!!!!!!!!  "<<history[0]<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
+      if (not(static_cast<int>(*firstTouch))) {
         if (explicitFlag) {
           cdata.kn = k_n[itype][jtype];
           cdata.kt = k_t[itype][jtype];
           cdata.gamman = gamma_n[itype][jtype];
           cdata.gammat = gamma_t[itype][jtype];
         } else {
-          //std::cout<<"AAAAAAAAAAAAAAA"<<std::endl;
           cdata.kn = (M_PI*M_PI + std::pow(log(e_n[itype][jtype]),2))/(std::pow(t_c[itype][jtype], 2))*meff;
           cdata.kt = 2.0/7.0*(M_PI*M_PI + std::pow(log(e_t[itype][jtype]),2))/(std::pow(t_c[itype][jtype], 2))*meff;
           cdata.gamman = -2.0 /t_c[itype][jtype] * std::log(e_n[itype][jtype])*meff;
           cdata.gammat = -4.0/7.0 /t_c[itype][jtype] * std::log(e_t[itype][jtype])*meff;
         }
+        
+        *kn = cdata.kn;
+        *kt = cdata.kt;
+        *gamman = cdata.gamman;
+        *gammat = cdata.gammat;
+        
         *firstTouch = 1;
         *touchFlag = 1;
         *firstTouchCap = 1;
       }
+      
+      cdata.kn = *kn;
+      cdata.kt = *kt;
+      cdata.gamman = *gamman;
+      cdata.gammat = *gammat;
       
       // convert Kn and Kt from pressure units to force/distance^2
       cdata.kn /= force->nktv2p;
@@ -341,7 +357,6 @@ namespace ContactModels
         const double Sstar = (1+0.5*(*thetaCur))*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0)); // [Willett2000], equation (15), use the full-length e.g 2*Sc
         *critDist = Sstar*(*R);
         curCapModel = capModels[capillaryModelLoad[itype][jtype]-1];
-        //std::cout<<"Critdist: "<<*critDist<<std::endl;
           
         *firstTouchCap = 0;
       }
@@ -372,7 +387,6 @@ namespace ContactModels
         i_forces.delta_torque[1] = -cdata.cri * tor2 * area_ratio;
         i_forces.delta_torque[2] = -cdata.cri * tor3 * area_ratio;
       } else {
-        // std::cerr<<"Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
         i_forces.delta_F[0] = cdata.Fn * cdata.en[0] + Ft1;
         i_forces.delta_F[1] = cdata.Fn * cdata.en[1] + Ft2;
         i_forces.delta_F[2] = cdata.Fn * cdata.en[2] + Ft3;
@@ -442,6 +456,7 @@ namespace ContactModels
     void endPass(CollisionData&, ForceData&, ForceData&){}
     DataFstat contactDataGet(CollisionData& cdata, ForceData&, ForceData&){
       //std::cout<<"EEEEEEEEEEEEEEEEE"<<std::endl;
+      /*
       double * const history = &cdata.contact_history[history_offset];
       double * const firstTouch = &history[0];
       double * const touchFlag = &history[1];
@@ -451,6 +466,7 @@ namespace ContactModels
       double * const vbCur = &history[5];
       double * const thetaCur = &history[6];
       double * const gammaCur = &history[7];
+      */ 
     }
 
   protected:
