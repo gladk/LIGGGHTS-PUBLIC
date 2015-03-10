@@ -79,3 +79,17 @@ class DataFstat {
       _DistCrit = 0;
     }
 };
+
+namespace boost {
+  namespace serialization {
+
+    template<class Archive>
+      void serialize(Archive & ar, Eigen::Vector3d & g, const unsigned int version)
+      {
+            ar & g[0];
+            ar & g[1];
+            ar & g[2];
+      }
+
+  } // namespace serialization
+} // namespace boost

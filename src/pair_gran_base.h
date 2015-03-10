@@ -38,6 +38,10 @@
 #include "neigh_list.h"
 #include "fix_contact_property_atom.h"
 #include "os_specific.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include <iostream>
+#include <fstream>
 
 #include "granular_pair_style.h"
 
@@ -54,6 +58,9 @@ class Granular : private Pointers, public IGranularPairStyle {
   ForceData * aligned_i_forces;
   ForceData * aligned_j_forces;
   ContactModel cmodel;
+
+  class FixPropertyGlobal *fstat1;
+  long int fstat;
 
   inline void force_update(double * const f, double * const torque,
       const ForceData & forces) {
@@ -104,6 +111,8 @@ public:
 
   virtual void init_granular() {
     cmodel.connectToProperties(force->registry);
+    fstat1=static_cast<FixPropertyGlobal*>(modify->find_fix_property("fstat","property/global","scalar",0,0,force->pair_style));
+    fstat = fstat1->compute_scalar();
 
 #ifdef LIGGGHTS_DEBUG
     if(comm->me == 0) {
@@ -188,7 +197,12 @@ public:
     cdata.shearupdate = pg->shearupdate();
 
     cmodel.beginPass(cdata, i_forces, j_forces);
+    
+    boost::mpi::environment env;
+    boost::mpi::communicator world;
 
+    std::vector<DataFstat>  FstatVector;
+    
     // loop over neighbors of my atoms
 
     for (int ii = 0; ii < inum; ii++) {
@@ -289,7 +303,20 @@ public:
           cdata.has_force_update = false;
           cmodel.noCollision(cdata, i_forces, j_forces);
         }
-
+        
+        if (not(update->ntimestep % fstat) and (update->ntimestep != 0)) {
+          DataFstat FstatTMP(
+            Eigen::Vector3d(x[i][0],x[i][1],x[i][2]), 
+            Eigen::Vector3d(x[j][0],x[j][1],x[j][2]), 
+            atom->tag[i], atom->tag[j], 
+            Eigen::Vector3d(i_forces.delta_F[0],i_forces.delta_F[1],i_forces.delta_F[2]),
+            -1,
+            -1,
+            -1
+          );
+          FstatVector.push_back(FstatTMP);
+        }
+        
         if(cdata.has_force_update) {
           if (cdata.computeflag) {
             force_update(f[i], torque[i], i_forces);
@@ -328,8 +355,99 @@ public:
 
     cmodel.endPass(cdata, i_forces, j_forces);
     
-    DataFstat a=cmodel.contactDataGet(cdata, i_forces, j_forces);
-    //cmodel.contactDataGet(cdata, i_forces, j_forces);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    if (not(update->ntimestep % fstat) and (update->ntimestep != 0) 
+        and (world.rank() == 0)) {
+      
+      const auto timestep = update->ntimestep;
+      std::vector<std::vector<DataFstat>> allF;
+      boost::mpi::gather(world, FstatVector, allF, 0);
+      
+      std::ofstream fstatOut;
+      long int numbForces = 0;
+      for (int proc = 0; proc < world.size(); ++proc) {
+        numbForces += allF[proc].size();
+      }
+      
+      std::string filename;
+      std::ostringstream oss;
+      oss << "post/fstat_" << timestep <<".txt";
+      filename += oss.str();
+      fstatOut.open(filename.c_str(), std::ios::out);
+
+      fstatOut << "ITEM: TIMESTEP " << std::endl;
+      fstatOut << timestep << std::endl;
+      fstatOut << "# "<< std::endl;
+      fstatOut << numbForces << std::endl;
+      fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] VolWater DistCurr DistCrit" << std::endl;
+      for (int proc = 0; proc < world.size(); ++proc) {
+          for (long int i=0; i<allF[proc].size(); i++){
+          DataFstat FstatTMP = allF[proc][i];
+            fstatOut << std::setprecision(15) <<
+              FstatTMP._P1(0)  << " " << FstatTMP._P1(1)  << " " << FstatTMP._P1(2)  << " "  << 
+              FstatTMP._P2(0)  << " " << FstatTMP._P2(1)  << " " << FstatTMP._P2(2)  << " "  << 
+              FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
+              FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << 
+              FstatTMP._VolWater  << " " << FstatTMP._DistCurr  << " "<< FstatTMP._DistCrit  << std::endl;
+          }
+        }
+        fstatOut.close();
+      } else if (not(update->ntimestep % fstat) and (update->ntimestep != 0)) {
+        boost::mpi::gather(world, FstatVector, 0);
+      }
+    
+    
+    
+    
+    
+    
+    
+    /*
+    for (int ii = 0; ii < inum; ii++) {
+      const int i = ilist[ii];
+      const double xtmp = x[i][0];
+      const double ytmp = x[i][1];
+      const double ztmp = x[i][2];
+      const double radi = radius[i];
+      int * const touch = firsttouch ? firsttouch[i] : NULL;
+      double * const allshear = firstshear ? firstshear[i] : NULL;
+      int * const jlist = firstneigh[i];
+      const int jnum = numneigh[i];
+
+      cdata.i = i;
+      cdata.radi = radi;
+      for (int jj = 0; jj < jnum; jj++) {
+        const int j = jlist[jj] & NEIGHMASK;
+        const double delx = xtmp - x[j][0];
+        const double dely = ytmp - x[j][1];
+        const double delz = ztmp - x[j][2];
+        const double rsq = delx * delx + dely * dely + delz * delz;
+        const double radj = radius[j];
+        const double radsum = radi + radj;
+
+        cdata.j = j;
+        cdata.delta[0] = delx;
+        cdata.delta[1] = dely;
+        cdata.delta[2] = delz;
+        cdata.rsq = rsq;
+        cdata.radj = radj;
+        cdata.radsum = radsum;
+        cdata.touch = touch ? &touch[jj] : NULL;
+        cdata.contact_history = allshear ? &allshear[dnum*jj] : NULL;
+        
+        //DataFstat a=cmodel.contactDataGet(cdata, i_forces, j_forces);
+      }
+    }
+    */
     
     if(store_contact_forces)
         pg->fix_contact_forces()->do_forward_comm();
