@@ -38,6 +38,7 @@ NORMAL_MODEL(HOOKE_VISCEL,hooke/viscel,5)
 #include <vector>
 #include <Eigen/Dense>
 
+
 namespace LIGGGHTS {
 namespace ContactModels
 {
@@ -47,11 +48,7 @@ namespace ContactModels
   public:
     static const int MASK = CM_REGISTER_SETTINGS | CM_CONNECT_TO_PROPERTIES | CM_COLLISION;
 
-    NormalModel(LAMMPS * lmp, IContactHistorySetup*) : Pointers(lmp),
-      k_n(NULL),
-      k_t(NULL),
-      gamma_n(NULL),
-      gamma_t(NULL),
+    NormalModel(LAMMPS * lmp, IContactHistorySetup* hsetup) : Pointers(lmp),
       e_n(NULL),
       e_t(NULL),
       t_c(NULL),
@@ -60,15 +57,18 @@ namespace ContactModels
       theta(NULL),
       vb(NULL),
       capillaryModelLoad(NULL),
-      critDist(-1),
-      R(-1), vbCur(-1), gammaCur(-1), thetaCur(-1),
       explicitFlag(false),
-      capillarFlag(false),
-      touchFlag(false)
+      capillarFlag(false)
     {
-      
+      history_offset = hsetup->add_history_value("firstTouch", "1");
+      history_offset = hsetup->add_history_value("touchFlag", "1");
+      history_offset = hsetup->add_history_value("firstTouchCap", "1");
+      history_offset = hsetup->add_history_value("critDist", "1");
+      history_offset = hsetup->add_history_value("R", "1");
+      history_offset = hsetup->add_history_value("vbCur", "1");
+      history_offset = hsetup->add_history_value("thetaCur", "1");
     }
-
+    
     void registerSettings(Settings & settings)
     {
       settings.registerOnOff("explicitly", explicitFlag);
@@ -274,27 +274,45 @@ namespace ContactModels
       const double meff = cdata.meff;
       const double xmu  = coeffFrict[cdata.itype][cdata.jtype];
       const double vrel = sqrt(cdata.vtr1*cdata.vtr1 + cdata.vtr2*cdata.vtr2 + cdata.vtr3*cdata.vtr3);
-
-      double kn, kt, gamman, gammat;
       
-      if (explicitFlag) {
-        kn = k_n[itype][jtype];
-        kt = k_t[itype][jtype];
-        gamman = gamma_n[itype][jtype];
-        gammat = gamma_t[itype][jtype];
-      } else {
-        kn = (M_PI*M_PI + std::pow(log(e_n[itype][jtype]),2))/(std::pow(t_c[itype][jtype], 2))*meff;
-        kt = 2.0/7.0*(M_PI*M_PI + std::pow(log(e_t[itype][jtype]),2))/(std::pow(t_c[itype][jtype], 2))*meff;
-        gamman = -2.0 /t_c[itype][jtype] * std::log(e_n[itype][jtype])*meff;
-        gammat = -4.0/7.0 /t_c[itype][jtype] * std::log(e_t[itype][jtype])*meff;
+      double * const history = &cdata.contact_history[history_offset];
+      double * const firstTouch = &history[0];
+      double * const touchFlag = &history[1];
+      double * const firstTouchCap = &history[2];
+      double * const critDist = &history[3];
+      double * const R = &history[4];
+      double * const vbCur = &history[5];
+      double * const thetaCur = &history[6];
+      double * const gammaCur = &history[7];
+      
+      //std::cout<<"!!!!!!!!!!!!!!!  "<<&cdata.firstTouch<<"  "<<cdata.firstTouch<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
+      //std::cout<<"!!!!!!!!!!!!!!!  "<<history[0]<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;history[0]=1;
+      
+      if (not(*firstTouch)) {
+        std::cout<<"!!!!!!!!!!!!!!!  "<<history[0]<<"; Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
+        if (explicitFlag) {
+          cdata.kn = k_n[itype][jtype];
+          cdata.kt = k_t[itype][jtype];
+          cdata.gamman = gamma_n[itype][jtype];
+          cdata.gammat = gamma_t[itype][jtype];
+        } else {
+          //std::cout<<"AAAAAAAAAAAAAAA"<<std::endl;
+          cdata.kn = (M_PI*M_PI + std::pow(log(e_n[itype][jtype]),2))/(std::pow(t_c[itype][jtype], 2))*meff;
+          cdata.kt = 2.0/7.0*(M_PI*M_PI + std::pow(log(e_t[itype][jtype]),2))/(std::pow(t_c[itype][jtype], 2))*meff;
+          cdata.gamman = -2.0 /t_c[itype][jtype] * std::log(e_n[itype][jtype])*meff;
+          cdata.gammat = -4.0/7.0 /t_c[itype][jtype] * std::log(e_t[itype][jtype])*meff;
+        }
+        *firstTouch = 1;
+        *touchFlag = 1;
+        *firstTouchCap = 1;
       }
       
       // convert Kn and Kt from pressure units to force/distance^2
-      kn /= force->nktv2p;
-      kt /= force->nktv2p;
+      cdata.kn /= force->nktv2p;
+      cdata.kt /= force->nktv2p;
 
-      const double Fn_damping = -gamman*cdata.vn;    
-      const double Fn_contact = kn*(cdata.radsum-cdata.r);
+      const double Fn_damping = -cdata.gamman*cdata.vn;    
+      const double Fn_contact = cdata.kn*(cdata.radsum-cdata.r);
       double Fn               = Fn_damping + Fn_contact;
 
       //limit force to avoid the artefact of negative repulsion force
@@ -304,33 +322,28 @@ namespace ContactModels
       }
       
       cdata.Fn = Fn;
-
-      cdata.kn = kn;
-      cdata.kt = kt;
-      cdata.gamman = gamman;
-      cdata.gammat = gammat;
       
       // force normalization
       const double Ft_friction = xmu * fabs(Fn);
-      const double Ft_damping = gammat*vrel;     
+      const double Ft_damping = cdata.gammat*vrel;     
       double Ft = 0.0;
 
       if (vrel != 0.0) {
         Ft = min(Ft_friction, Ft_damping) / vrel;
       }
       
-      if (not(touchFlag) and capillarFlag) {
-        touchFlag = true;
-        if (critDist < 0) {
-          R = 2*cdata.radi*cdata.radj/(cdata.radi + cdata.radj);
-          vbCur = vb[itype][jtype];
-          gammaCur = gamma[itype][jtype];
-          thetaCur = theta[itype][jtype];
-          const double Vstar = vbCur/(R*R*R);
-          const double Sstar = (1+0.5*thetaCur)*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0)); // [Willett2000], equation (15), use the full-length e.g 2*Sc
-          critDist = Sstar*R;
-          curCapModel = capModels[capillaryModelLoad[itype][jtype]-1];
-        }
+      if (*firstTouchCap and capillarFlag) {
+        *R = 2*cdata.radi*cdata.radj/(cdata.radi + cdata.radj);
+        *vbCur = vb[itype][jtype];
+        *gammaCur = gamma[itype][jtype];
+        *thetaCur = theta[itype][jtype];
+        const double Vstar = (*vbCur)/(std::pow(*R, 3));
+        const double Sstar = (1+0.5*(*thetaCur))*(pow(Vstar,1/3.0) + 0.1*pow(Vstar,2.0/3.0)); // [Willett2000], equation (15), use the full-length e.g 2*Sc
+        *critDist = Sstar*(*R);
+        curCapModel = capModels[capillaryModelLoad[itype][jtype]-1];
+        //std::cout<<"Critdist: "<<*critDist<<std::endl;
+          
+        *firstTouchCap = 0;
       }
       
       // tangential force due to tangential velocity damping
@@ -359,6 +372,7 @@ namespace ContactModels
         i_forces.delta_torque[1] = -cdata.cri * tor2 * area_ratio;
         i_forces.delta_torque[2] = -cdata.cri * tor3 * area_ratio;
       } else {
+        // std::cerr<<"Time: "<<update->ntimestep<<"; i: "<<cdata.i<<"; j:"<<cdata.j<<std::endl;
         i_forces.delta_F[0] = cdata.Fn * cdata.en[0] + Ft1;
         i_forces.delta_F[1] = cdata.Fn * cdata.en[1] + Ft2;
         i_forces.delta_F[2] = cdata.Fn * cdata.en[2] + Ft3;
@@ -373,24 +387,36 @@ namespace ContactModels
         j_forces.delta_torque[1] = -cdata.crj * tor2;
         j_forces.delta_torque[2] = -cdata.crj * tor3;
       }
+      
+      //fstat = DataFstat(Eigen::Vector3d P1, Eigen::Vector3d P2, int Id1, int Id2, Eigen::Vector3d Val, double VolWater, double DistCurr, double DistCrit)
     }
 
     void noCollision(ContactData& cdata, ForceData& i_forces, ForceData& j_forces){
-      if (touchFlag and capillarFlag) {
+      double * const history = &cdata.contact_history[history_offset];
+      double * const firstTouch = &history[0];
+      double * const touchFlag = &history[1];
+      double * const firstTouchCap = &history[2];
+      double * const critDist = &history[3];
+      double * const R = &history[4];
+      double * const vbCur = &history[5];
+      double * const thetaCur = &history[6];
+      double * const gammaCur = &history[7];
+      
+      if (*touchFlag and capillarFlag) {
         cdata.has_force_update = true;
         const Eigen::Vector3d dCur = Eigen::Vector3d(cdata.delta[0],cdata.delta[1],cdata.delta[2]);
         const Eigen::Vector3d dCurN = dCur.normalized();
         const double s = dCur.norm() - cdata.radsum;
-        if(critDist  > 0 and s < critDist) {
+        if(*critDist  > 0 and s < *critDist) {
           /*
           * Capillar model from Willet [Willett2000] (analytical solution), but
           * used also in the work of Herminghaus [Herminghaus2005]
           */
-          const double Gamma = gammaCur;
-          const double Vb = vbCur;
-          const double Theta = thetaCur;
+          const double Gamma = *gammaCur;
+          const double Vb = *vbCur;
+          const double Theta = *thetaCur;
           
-          const double Fn = curCapModel(R, Vb, Gamma, Theta, s); 
+          const double Fn = curCapModel(*R, Vb, Gamma, Theta, s); 
           
           if(cdata.is_wall) {
             const double area_ratio = cdata.area_ratio;
@@ -408,12 +434,14 @@ namespace ContactModels
             j_forces.delta_F[2] = -i_forces.delta_F[2];
           }
         } else {
-          touchFlag = false;
+          *touchFlag = 0;
         }
       }
     }
     void beginPass(CollisionData&, ForceData&, ForceData&){}
-    void endPass(CollisionData&, ForceData&, ForceData&){}
+    void endPass(CollisionData&, ForceData&, ForceData&){
+      //std::cerr<<"!!!!!!!    "<<update->ntimestep<<";   critDist: "<<critDist<<std::endl;
+    }
 
   protected:
     double ** k_n;
@@ -434,15 +462,11 @@ namespace ContactModels
     bool explicitFlag;
     bool capillarFlag;
     
-    bool touchFlag;
+    int history_offset;
     
-    double critDist;
-    double R;
-    double vbCur;
-    double gammaCur;
-    double thetaCur;
     std::vector<double (*)(const double &, const double &, const double &, const double &, const double &)> capModels;
     double (*curCapModel)(const double &, const double &, const double &, const double &, const double &);
+    
   };
 }
 }
