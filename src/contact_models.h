@@ -41,6 +41,8 @@
 #include "settings.h"
 #include "contact_model_constants.h"
 
+#include "dataFstat.h"
+
 using namespace LAMMPS_NS;
 
 namespace LIGGGHTS {
@@ -109,6 +111,7 @@ namespace ContactModels
     inline void connectToProperties(PropertyRegistry & registry);
     inline void collision(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces);
     inline void noCollision(ContactData & cdata, ForceData & i_forces, ForceData & j_forces);
+    inline DataFstat contactDataGet(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces);
 
     inline double stressStrainExponent();
   };
@@ -242,6 +245,11 @@ namespace ContactModels
       cohesionModel.noCollision(cdata, i_forces, j_forces);
       tangentialModel.noCollision(cdata, i_forces, j_forces);
       rollingModel.noCollision(cdata, i_forces, j_forces);
+    }
+    
+    inline DataFstat contactDataGet(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces)
+    {
+      return normalModel.contactDataGet(cdata, i_forces, j_forces);
     }
   };
 

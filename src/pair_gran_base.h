@@ -327,7 +327,10 @@ public:
     }
 
     cmodel.endPass(cdata, i_forces, j_forces);
-
+    
+    //DataFstat a=cmodel.contactDataGet(cdata, i_forces, j_forces);
+    //cmodel.contactDataGet(cdata, i_forces, j_forces);
+    
     if(store_contact_forces)
         pg->fix_contact_forces()->do_forward_comm();
   }
