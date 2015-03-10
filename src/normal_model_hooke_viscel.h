@@ -454,20 +454,7 @@ namespace ContactModels
     }
     void beginPass(CollisionData&, ForceData&, ForceData&){}
     void endPass(CollisionData&, ForceData&, ForceData&){}
-    DataFstat contactDataGet(CollisionData& cdata, ForceData&, ForceData&){
-      double * const history = &cdata.contact_history[history_offset];
-      std::cout<<&history[0]<<std::endl;
-      double * const firstTouch = &history[0];
-      double * const touchFlag = &history[1];
-      double * const firstTouchCap = &history[2];
-      double * const critDist = &history[3];
-      double * const R = &history[4];
-      double * const vbCur = &history[5];
-      double * const thetaCur = &history[6];
-      double * const gammaCur = &history[7];
-      return DataFstat();
-    }
-
+    
   protected:
     double ** k_n;
     double ** k_t;

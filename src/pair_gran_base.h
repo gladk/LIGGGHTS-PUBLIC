@@ -42,6 +42,7 @@
 #include "stdlib.h"
 #include <iostream>
 #include <fstream>
+#include "dataFstat.h"
 
 #include "granular_pair_style.h"
 
@@ -404,50 +405,6 @@ public:
       } else if (not(update->ntimestep % fstat) and (update->ntimestep != 0)) {
         boost::mpi::gather(world, FstatVector, 0);
       }
-    
-    
-    
-    
-    
-    
-    
-    /*
-    for (int ii = 0; ii < inum; ii++) {
-      const int i = ilist[ii];
-      const double xtmp = x[i][0];
-      const double ytmp = x[i][1];
-      const double ztmp = x[i][2];
-      const double radi = radius[i];
-      int * const touch = firsttouch ? firsttouch[i] : NULL;
-      double * const allshear = firstshear ? firstshear[i] : NULL;
-      int * const jlist = firstneigh[i];
-      const int jnum = numneigh[i];
-
-      cdata.i = i;
-      cdata.radi = radi;
-      for (int jj = 0; jj < jnum; jj++) {
-        const int j = jlist[jj] & NEIGHMASK;
-        const double delx = xtmp - x[j][0];
-        const double dely = ytmp - x[j][1];
-        const double delz = ztmp - x[j][2];
-        const double rsq = delx * delx + dely * dely + delz * delz;
-        const double radj = radius[j];
-        const double radsum = radi + radj;
-
-        cdata.j = j;
-        cdata.delta[0] = delx;
-        cdata.delta[1] = dely;
-        cdata.delta[2] = delz;
-        cdata.rsq = rsq;
-        cdata.radj = radj;
-        cdata.radsum = radsum;
-        cdata.touch = touch ? &touch[jj] : NULL;
-        cdata.contact_history = allshear ? &allshear[dnum*jj] : NULL;
-        
-        //DataFstat a=cmodel.contactDataGet(cdata, i_forces, j_forces);
-      }
-    }
-    */
     
     if(store_contact_forces)
         pg->fix_contact_forces()->do_forward_comm();

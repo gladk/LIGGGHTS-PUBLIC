@@ -168,7 +168,6 @@ namespace ContactModels
     void noCollision(ContactData&, ForceData&, ForceData&){}
     void beginPass(CollisionData&, ForceData&, ForceData&){}
     void endPass(CollisionData&, ForceData&, ForceData&){}
-    DataFstat contactDataGet(CollisionData&, ForceData&, ForceData&){}
 
   protected:
     double ** k_n;
