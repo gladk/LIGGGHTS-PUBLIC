@@ -209,6 +209,7 @@ namespace ContactModels
 
     void beginPass(CollisionData&, ForceData&, ForceData&){}
     void endPass(CollisionData&, ForceData&, ForceData&){}
+    DataFstat getDataFstat(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces){}
 
   protected:
     double **kn2k2Max;

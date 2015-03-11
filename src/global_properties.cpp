@@ -586,4 +586,49 @@ namespace MODEL_PARAMS
   }
 
   /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createEn(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "e_n", caller);
+  }
+
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createEt(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "e_t", caller);
+  }
+
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createTc(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "t_c", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createGamma(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "gamma", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createTheta(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "theta", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createVb(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "vb", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
+  MatrixProperty* createCapillaryModel(PropertyRegistry & registry, const char * caller, bool)
+  {
+    return createPerTypePairProperty(registry, "capillaryModel", caller);
+  }
+  /* ---------------------------------------------------------------------- */
+
 }

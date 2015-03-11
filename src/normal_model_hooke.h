@@ -194,6 +194,7 @@ namespace ContactModels
     inline void noCollision(ContactData&, ForceData&, ForceData&){}
     void beginPass(CollisionData&, ForceData&, ForceData&){}
     void endPass(CollisionData&, ForceData&, ForceData&){}
+    DataFstat getDataFstat(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces){}
 
   protected:
     double ** Yeff;
