@@ -249,7 +249,6 @@ namespace ContactModels
       tangentialModel.noCollision(cdata, i_forces, j_forces);
       rollingModel.noCollision(cdata, i_forces, j_forces);
     }
-    
   };
 
   template<>

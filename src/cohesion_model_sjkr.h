@@ -80,7 +80,6 @@ namespace ContactModels {
       if(cdata.touch) *cdata.touch |= TOUCH_COHESION_MODEL;
 
       // apply normal force
-      cdata.has_force_update = true;
       if(cdata.is_wall) {
         const double Fn_ = Fn_coh * cdata.area_ratio;
         i_forces.delta_F[0] += Fn_ * cdata.en[0];

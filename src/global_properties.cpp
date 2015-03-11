@@ -61,7 +61,6 @@ namespace MODEL_PARAMS
   static const char * COEFFICIENT_MAX_ELASTIC_STIFFNESS = "coefficientMaxElasticStiffness";
   static const char * COEFFICIENT_ADHESION_STIFFNESS = "coefficientAdhesionStiffness";
   static const char * COEFFICIENT_PLASTICITY_DEPTH = "coefficientPlasticityDepth";
-  
 
   /* -----------------------------------------------------------------------
    * Utility functions
