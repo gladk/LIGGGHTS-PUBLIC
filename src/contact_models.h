@@ -40,6 +40,7 @@
 #include "pair_gran.h"
 #include "settings.h"
 #include "contact_model_constants.h"
+#include "dataFstat.h"
 
 using namespace LAMMPS_NS;
 
@@ -109,6 +110,7 @@ namespace ContactModels
     inline void connectToProperties(PropertyRegistry & registry);
     inline void collision(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces);
     inline void noCollision(ContactData & cdata, ForceData & i_forces, ForceData & j_forces);
+    inline DataFstat getDataFstat(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces);
 
     inline double stressStrainExponent();
   };
@@ -234,7 +236,11 @@ namespace ContactModels
       tangentialModel.collision(cdata, i_forces, j_forces);
       rollingModel.collision(cdata, i_forces, j_forces);
     }
-
+    inline DataFstat getDataFstat(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces)
+    {
+      return normalModel.getDataFstat(cdata, i_forces, j_forces);
+    }
+    
     inline void noCollision(ContactData & cdata, ForceData & i_forces, ForceData & j_forces)
     {
       surfaceModel.noCollision(cdata, i_forces, j_forces);

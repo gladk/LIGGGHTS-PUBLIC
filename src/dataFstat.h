@@ -77,7 +77,7 @@ class DataFstat {
       _VolWater = 0;
       _DistCurr = 0;
       _DistCrit = 0;
-    }
+    };
 };
 
 namespace boost {
@@ -91,5 +91,5 @@ namespace boost {
             ar & g[2];
       }
 
-  } // namespace serialization
-} // namespace boost
+  }
+}

@@ -22,7 +22,7 @@
 /* ----------------------------------------------------------------------
    Contributing authors:
    Christoph Kloss (JKU Linz, DCS Computing GmbH, Linz)
-   Richard Berger (JKU Linz)
+   Anton Gladky (TU Freiberg)
 ------------------------------------------------------------------------- */
 #ifdef NORMAL_MODEL
 NORMAL_MODEL(HOOKE_VISCEL,hooke/viscel,5)
@@ -449,11 +449,33 @@ namespace ContactModels
           }
         } else {
           *touchFlag = 0;
+          *firstTouch = 0;
         }
       }
     }
     void beginPass(CollisionData&, ForceData&, ForceData&){}
     void endPass(CollisionData&, ForceData&, ForceData&){}
+    DataFstat getDataFstat(CollisionData & cdata, ForceData & i_forces, ForceData & j_forces) {
+      double * const history = &cdata.contact_history[history_offset];
+      double * const firstTouch = &history[0];
+      double * const touchFlag = &history[1];
+      double * const firstTouchCap = &history[2];
+      double * const critDist = &history[3];
+      double * const R = &history[4];
+      double * const vbCur = &history[5];
+      double * const thetaCur = &history[6];
+      double * const gammaCur = &history[7];
+      DataFstat a;
+      if (*touchFlag and capillarFlag) {
+        const Eigen::Vector3d dCur = Eigen::Vector3d(cdata.delta[0],cdata.delta[1],cdata.delta[2]);
+        const Eigen::Vector3d dCurN = dCur.normalized();
+        const double s = dCur.norm() - cdata.radsum;
+        a._VolWater = *vbCur;
+        a._DistCurr = s;
+        a._DistCrit = *critDist;
+      }
+      return a;
+    }
     
   protected:
     double ** k_n;
@@ -482,7 +504,6 @@ namespace ContactModels
   };
 }
 }
-
 
 #endif // NORMAL_MODEL_HOOKE_VISCEL_H_
 #endif
