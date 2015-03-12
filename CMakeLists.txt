@@ -14,7 +14,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cMake")
 SET(VERSION 3.0.7)
 #=======================================
 
-FIND_PACKAGE(Boost COMPONENTS mpi serialization REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS mpi serialization iostreams REQUIRED)
 INCLUDE_DIRECTORIES (${Boost_INCLUDE_DIRS})
 #=======================================
 
@@ -50,6 +50,8 @@ ELSE(JPEG_FOUND)
   MESSAGE(STATUS "JPEG NOT found!")
 ENDIF(JPEG_FOUND)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLAMMPS_GZIP")
+ 
 #=======================================
 
 INCLUDE(FindMPI)

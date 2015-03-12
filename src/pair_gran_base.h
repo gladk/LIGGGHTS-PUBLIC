@@ -49,6 +49,11 @@
 #include <boost/unordered_set.hpp>
 #include <utility>
 
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/filter/bzip2.hpp>
+#include <boost/iostreams/copy.hpp>
+
 namespace LIGGGHTS {
 using namespace ContactModels;
 
@@ -387,7 +392,7 @@ public:
         std::vector<std::vector<DataFstat>> allF;
         boost::mpi::gather(world, FstatVector, allF, 0);
         
-        std::ofstream fstatOut;
+        
         long int numbForces = 0;
         
         std::vector<DataFstat> commonDataFstat;
@@ -407,12 +412,19 @@ public:
           }
         }
         
-        std::string filename;
-        std::ostringstream oss;
-        oss << "post/fstat_" << timestep <<".txt";
-        filename += oss.str();
-        fstatOut.open(filename.c_str(), std::ios::out);
-  
+        
+        
+        
+        
+        std::stringstream ss; ss << timestep;
+        std::string filename = (std::string("post/fstat_") + ss.str() + std::string(".txt.bz2"));
+        
+        std::ofstream fileOut(filename.c_str(), std::ios::out | std::ios::binary);
+        boost::iostreams::filtering_streambuf<boost::iostreams::output> outStream;
+        outStream.push(boost::iostreams::bzip2_compressor()); 
+        outStream.push(fileOut);
+        std::ostream fstatOut(&outStream);
+        
         fstatOut << "ITEM: TIMESTEP " << std::endl;
         fstatOut << timestep << std::endl;
         fstatOut << "# "<< std::endl;
@@ -426,7 +438,6 @@ public:
             FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << 
             FstatTMP._VolWater  << " " << FstatTMP._DistCurr  << " "<< FstatTMP._DistCrit  << std::endl;
         }
-        fstatOut.close();
       } else {
         boost::mpi::gather(world, FstatVector, 0);
       }
