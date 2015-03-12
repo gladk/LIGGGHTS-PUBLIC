@@ -46,6 +46,9 @@
 
 #include "granular_pair_style.h"
 
+#include <boost/unordered_set.hpp>
+#include <utility>
+
 namespace LIGGGHTS {
 using namespace ContactModels;
 
@@ -311,6 +314,7 @@ public:
               -1,
               -1
             );
+            FstatTMP.swap_ids_if_needed();
             FstatVector.push_back(FstatTMP);
           }
         } else {
@@ -332,6 +336,7 @@ public:
             FstatTMP._DistCurr = FstatRet._DistCurr;
             FstatTMP._DistCrit = FstatRet._DistCrit;
             if (FstatTMP._DistCrit) {
+              FstatTMP.swap_ids_if_needed();
               FstatVector.push_back(FstatTMP);
             }
           }
@@ -384,8 +389,22 @@ public:
         
         std::ofstream fstatOut;
         long int numbForces = 0;
+        
+        std::vector<DataFstat> commonDataFstat;
+        boost::unordered_set<std::pair<int, int> > uniqIdPaitrs;
+        
+        // Prepare vector of only unique forces
+        
         for (int proc = 0; proc < world.size(); ++proc) {
-          numbForces += allF[proc].size();
+          for (auto FstatTMP : allF[proc] ) {
+            auto tmpPair = std::make_pair (FstatTMP._Id1,FstatTMP._Id2);
+            auto search = uniqIdPaitrs.find(tmpPair);
+            if(search == uniqIdPaitrs.end()) {
+              uniqIdPaitrs.insert(tmpPair);
+              numbForces++;
+              commonDataFstat.push_back(FstatTMP);
+            }
+          }
         }
         
         std::string filename;
@@ -399,19 +418,16 @@ public:
         fstatOut << "# "<< std::endl;
         fstatOut << numbForces << std::endl;
         fstatOut << "ITEM: ENTRIES c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12] VolWater DistCurr DistCrit" << std::endl;
-        for (int proc = 0; proc < world.size(); ++proc) {
-            for (long int i=0; i<allF[proc].size(); i++){
-            DataFstat FstatTMP = allF[proc][i];
-              fstatOut << std::setprecision(15) <<
-                FstatTMP._P1(0)  << " " << FstatTMP._P1(1)  << " " << FstatTMP._P1(2)  << " "  << 
-                FstatTMP._P2(0)  << " " << FstatTMP._P2(1)  << " " << FstatTMP._P2(2)  << " "  << 
-                FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
-                FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << 
-                FstatTMP._VolWater  << " " << FstatTMP._DistCurr  << " "<< FstatTMP._DistCrit  << std::endl;
-            }
-          }
-          fstatOut.close();
-        } else {
+        for (auto FstatTMP : commonDataFstat ) {
+          fstatOut << std::setprecision(15) <<
+            FstatTMP._P1(0)  << " " << FstatTMP._P1(1)  << " " << FstatTMP._P1(2)  << " "  << 
+            FstatTMP._P2(0)  << " " << FstatTMP._P2(1)  << " " << FstatTMP._P2(2)  << " "  << 
+            FstatTMP._Id1  << " " << FstatTMP._Id2  << " 0 " <<
+            FstatTMP._Val(0)  << " " << FstatTMP._Val(1)  << " " << FstatTMP._Val(2)  << " "  << 
+            FstatTMP._VolWater  << " " << FstatTMP._DistCurr  << " "<< FstatTMP._DistCrit  << std::endl;
+        }
+        fstatOut.close();
+      } else {
         boost::mpi::gather(world, FstatVector, 0);
       }
     }

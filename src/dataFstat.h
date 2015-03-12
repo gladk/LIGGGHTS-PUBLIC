@@ -78,6 +78,13 @@ class DataFstat {
       _DistCurr = 0;
       _DistCrit = 0;
     };
+    void swap_ids_if_needed() {
+      if (_Id2 > _Id1) {
+        std::swap(_P1, _P2);
+        std::swap(_Id1, _Id2);
+        _Val*=-1;
+      }
+    }
 };
 
 namespace boost {
