@@ -70,6 +70,8 @@ ENDIF(MPI_C_FOUND AND MPI_CXX_FOUND)
 
 #=======================================
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 #Disabled modules
 #GPU KIM MEAM POEMS REAX SRD
 IF(ENABLE_PACKAGE)
